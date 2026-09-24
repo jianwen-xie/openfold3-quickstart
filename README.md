@@ -1,60 +1,54 @@
-# OpenFold3 Training Quickstart
+# OpenFold3 Quickstart
 
-An executable notebook that takes [OpenFold3](https://github.com/aqlaboratory/openfold-3) from a
-fresh checkout to a completed training run on **one GPU** — environment, a small real dataset,
-the config that matters, the launch, and how to read what came out.
+Install [OpenFold3](https://github.com/aqlaboratory/openfold-3), predict a structure, and train
+on one GPU. Every command in the notebook is the command you type — it runs them as shell cells
+and keeps the real output.
 
 **[→ Open `quickstart.ipynb`](quickstart.ipynb)** — it ships with outputs, so you can read every
 result without a GPU.
 
-This is the single-GPU rung. The same config scales to multi-GPU and multi-node by changing two
-numbers; the notebook ends by showing which.
+| Section | What it does |
+|---|---|
+| 1. Install | pixi environment, model parameters |
+| 2. Inference | predict ubiquitin from sequence |
+| 3. Training | two epochs on a small PDB subset |
+| 4. Scaling | what changes for multi-GPU and the full dataset |
 
-## Training OpenFold3 is lighter than it sounds
-
-The phrase "train an AlphaFold3-style model" suggests a cluster and a storage budget. For a run
-that proves your setup works, it doesn't:
+## Measured on one H100
 
 | | |
 |---|---|
-| Training data | **71 MB** (8 training + 4 validation structures) |
+| Inference | 5 diffusion samples, mean pLDDT ~90, ~10 s of GPU time |
+| Training | 8 steps in ~5 minutes |
 | Peak GPU memory | **28.3 GiB** at `token_budget: 384` — fits a 40 GB card |
-| Wall time | **~5 minutes** end to end, 2 epochs |
-| Environment | ~14 GB (pixi) |
-| Per-run checkpoint | ~6 GB |
+| Training data | 71 MB (8 train + 4 validation structures) |
+| Model parameters | 4.3 GB |
+| pixi environment | ~14 GB |
+| Checkpoint per run | 6.3 GB |
 
-Measured on a single [NVIDIA H100 80GB HBM3](https://www.nvidia.com/en-us/data-center/h100/).
-The full tables are in the notebook.
+Measured on a single [NVIDIA H100 80GB HBM3](https://www.nvidia.com/en-us/data-center/h100/)
+with `openfold3` 0.5.1.dev55, torch 2.10.0 / CUDA 12.9.
 
-## What the notebook covers
-
-1. Environment check — GPU, torch/CUDA, `openfold3` version
-2. Building the training subset, and a path trap that silently breaks the run
-3. The config settings that decide whether it runs and how much memory it takes
-4. Launching the run
-5. Reading the results — losses, peak memory, where the checkpoint went
-6. What changes for multi-GPU and the full dataset
+Training OpenFold3 is lighter than the phrase suggests: for a run that proves your setup works,
+the dataset is tens of megabytes and the model fits on a mid-range card.
 
 ## Three things that cost time to discover
 
 **The committed config is a decoy.** `scripts/datasets/train_pdb_subset.yaml` looks like the
-config to use, but it still holds the absolute paths of whoever generated it. The real one is
-written to `datasets/train_pdb_subset.yaml` at the repo root, with your paths.
+config to use, but it still holds the absolute paths of whoever generated it. The generator
+writes a fresh copy, with your paths, to `datasets/train_pdb_subset.yaml`. The notebook prints
+both side by side.
 
-**A successful run records nothing by default.** `LoggingConfig` accepts Weights & Biases or
-nothing, and the generated config sets `wandb_config: null`. Every loss — `distogram`,
-`diffusion`, `plddt`, `pae` and the rest — is computed and discarded, leaving an empty `logs/`
-directory next to a 6 GB checkpoint.
+**A successful run records nothing by default, and the obvious fix doesn't work.**
+`LoggingConfig` accepts Weights & Biases or nothing, and the generated config sets
+`wandb_config: null` — so every loss is computed and thrown away, leaving an empty `logs/`
+directory beside a 6 GB checkpoint. Setting `wandb_config.offline: true` in the YAML is *not*
+enough: the flag never reaches `wandb.init`, which still tries to log in and aborts the run
+before training starts. The environment variable `WANDB_MODE=offline` is what works.
 
-Worse, the obvious fix doesn't work. Setting `wandb_config.offline: true` in the YAML is not
-enough — the flag never reaches `wandb.init`, which still tries to log in and kills the run
-before training starts. The environment variable `WANDB_MODE=offline` is what actually works.
-With it, metrics are captured locally with no account; the notebook then converts them to a
-`metrics.csv`.
-
-**Enabling logging moves the checkpoint.** It goes from `<output_dir>/checkpoints/` to
-`<output_dir>/<project>/<run id>/checkpoints/`, so anything with a hardcoded path breaks the
-moment you turn logging on.
+**Enabling logging moves the checkpoint**, from `<output_dir>/checkpoints/` to
+`<output_dir>/<project>/<run id>/checkpoints/`. Anything with a hardcoded path breaks the moment
+you turn logging on.
 
 ## Prerequisites
 
@@ -66,12 +60,13 @@ cd openfold-3
 pixi install -e openfold3-cuda12
 ```
 
-Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU, and about 20 GB free. Point the notebook at the
-checkout with the `OPENFOLD3_DIR` environment variable, or edit the path in its first cell.
+Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU, and roughly 25 GB free. Edit the `%cd` in the
+notebook's first cell to point at your checkout.
 
-Most cells shell out through `pixi run`, so the kernel only needs to start subprocesses — except
-the results cell, which imports `wandb` to read the metrics and therefore wants the pixi
-environment as its kernel:
+Most cells are shell commands run through `pixi run`, so the kernel only needs to launch
+subprocesses. Two cells are Python analysis — mean pLDDT, and pulling the loss history out of
+wandb's binary log — and the second imports `wandb`, so the pixi environment is the most
+convenient kernel:
 
 ```bash
 pixi run -e openfold3-cuda12 python -m pip install ipykernel
@@ -79,9 +74,12 @@ pixi run -e openfold3-cuda12 python -m ipykernel install --user \
     --name openfold3-cuda12 --display-name "OpenFold3 (pixi cuda12)"
 ```
 
-## A note on what a smoke test shows
+Inference uses `--use-msa-server true`, which calls the public ColabFold server — so that step
+needs outbound network and is subject to their rate limits.
 
-The loss in the notebook does not go down, and it isn't presented as if it might. Eight
+## What a smoke test shows
+
+The training loss does not go down, and the notebook doesn't present it as if it might. Eight
 optimiser steps over eight structures proves the data pipeline, model, loss, backward pass and
 checkpoint writer work together — nothing about convergence. Real training is orders of
 magnitude more steps against the full PDB set.
