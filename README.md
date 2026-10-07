@@ -50,23 +50,91 @@ before training starts. The environment variable `WANDB_MODE=offline` is what wo
 `<output_dir>/<project>/<run id>/checkpoints/`. Anything with a hardcoded path breaks the moment
 you turn logging on.
 
-## Prerequisites
+## Running it
 
-The notebook drives an existing checkout rather than installing one:
+Everything below is copy-pasteable. Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU
+(H100/H200 class for these figures), and roughly 25 GB free.
+
+### 1. Install
 
 ```bash
 git clone https://github.com/aqlaboratory/openfold-3.git
 cd openfold-3
+
+# ~14 GB environment
 pixi install -e openfold3-cuda12
+
+# model parameters -> ~/.openfold3/ (~4.3 GB); idempotent
+pixi run -e openfold3-cuda12 setup_openfold --non-interactive
 ```
 
-Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU, and roughly 25 GB free. Edit the `%cd` in the
-notebook's first cell to point at your checkout.
+Check it worked:
 
-Most cells are shell commands run through `pixi run`, so the kernel only needs to launch
-subprocesses. Two cells are Python analysis — mean pLDDT, and pulling the loss history out of
-wandb's binary log — and the second imports `wandb`, so the pixi environment is the most
-convenient kernel:
+```bash
+pixi run -e openfold3-cuda12 python -c "import torch; print(torch.cuda.get_device_name(0))"
+```
+
+### 2. Inference
+
+Predict a structure from sequence. The repo ships example queries; ubiquitin is the smallest
+at 76 residues.
+
+```bash
+pixi run -e openfold3-cuda12 run_openfold predict \
+    --query-json examples/example_inference_inputs/query_ubiquitin.json \
+    --use-msa-server true \
+    --output-dir ./quickstart_inference
+```
+
+`--use-msa-server true` uses the public ColabFold server, so this step needs outbound network
+and is subject to their rate limits. Results land in
+`quickstart_inference/ubiquitin/seed_42/` — five diffusion samples, each an mmCIF structure
+with a matching `_confidences.json` holding per-atom `plddt`, plus `pae` and `pde`.
+
+### 3. Training
+
+Sample a small subset and download only those structures — 8 training and 4 validation by
+default, about 71 MB. The first run also pulls a 1.6 GB index to sample from, which is not
+training data and can be deleted afterwards.
+
+```bash
+pixi run -e openfold3-cuda12 setup-pdb-subset
+```
+
+This writes a config to `datasets/train_pdb_subset.yaml`. **Use that one** — the committed
+`scripts/datasets/train_pdb_subset.yaml` is a template still holding another user's absolute
+paths.
+
+Add offline logging, or the run will discard every loss it computes:
+
+```bash
+pixi run -e openfold3-cuda12 python -c "
+import yaml
+c = yaml.safe_load(open('datasets/train_pdb_subset.yaml'))
+c['logging_config'] = {'log_lr': True, 'wandb_config': {
+    'project': 'openfold3-quickstart', 'experiment_name': 'single-h100', 'offline': True}}
+c['experiment_settings']['output_dir'] = './quickstart_run'
+yaml.safe_dump(c, open('datasets/quickstart_single_h100.yaml', 'w'), sort_keys=False)"
+```
+
+Then train. `WANDB_MODE=offline` is required — the YAML flag alone does not prevent a login
+attempt:
+
+```bash
+WANDB_MODE=offline pixi run -e openfold3-cuda12 run_openfold train \
+    --runner-yaml datasets/quickstart_single_h100.yaml --seed 42
+```
+
+Two epochs of four steps, a few minutes. The checkpoint lands in
+`quickstart_run/openfold3-quickstart/<run id>/checkpoints/last.ckpt` and the losses in
+`quickstart_run/wandb/offline-run-*/run-*.wandb`. The notebook has a cell that converts that
+binary log to a CSV.
+
+### Running the notebook instead
+
+The notebook runs all of the above and keeps the output. Most of its cells are these same
+shell commands; two are Python analysis, and one imports `wandb`, so the pixi environment is
+the most convenient kernel:
 
 ```bash
 pixi run -e openfold3-cuda12 python -m pip install ipykernel
@@ -74,8 +142,7 @@ pixi run -e openfold3-cuda12 python -m ipykernel install --user \
     --name openfold3-cuda12 --display-name "OpenFold3 (pixi cuda12)"
 ```
 
-Inference uses `--use-msa-server true`, which calls the public ColabFold server — so that step
-needs outbound network and is subject to their rate limits.
+Then edit the `%cd` in its first cell to point at your checkout.
 
 ## What a smoke test shows
 
