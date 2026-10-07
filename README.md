@@ -1,36 +1,20 @@
 # OpenFold3 Quickstart
 
-Install [OpenFold3](https://github.com/aqlaboratory/openfold-3), predict a structure, and train
-on one GPU. Every command in the notebook is the command you type — it runs them as shell cells
-and keeps the real output.
+Run [OpenFold3](https://github.com/aqlaboratory/openfold-3) training and inference, and watch
+the training curve. This is the **single-GPU** stage; multi-GPU and Slurm multi-node follow.
 
-**[→ Open `quickstart.ipynb`](quickstart.ipynb)** — it ships with outputs, so you can read every
-result without a GPU.
+**[→ Open `quickstart.ipynb`](quickstart.ipynb)** — the same steps, executed, with outputs
+kept so you can read them without a GPU.
 
-| Section | What it does |
+| Stage | Status |
 |---|---|
-| 1. Install | pixi environment, model parameters |
-| 2. Inference | predict ubiquitin from sequence |
-| 3. Training | two epochs on a small PDB subset |
-| 4. Scaling | what changes for multi-GPU and the full dataset |
+| Single H100 | this guide |
+| Multiple H100s on one node | to follow |
+| Multi-node via Slurm | to follow |
 
-## Measured on one H100
-
-| | |
-|---|---|
-| Inference | 5 diffusion samples, mean pLDDT ~90, ~10 s of GPU time |
-| Training | 8 steps in ~5 minutes |
-| Peak GPU memory | **28.3 GiB** at `token_budget: 384` — fits a 40 GB card |
-| Training data | 71 MB (8 train + 4 validation structures) |
-| Model parameters | 4.3 GB |
-| pixi environment | ~14 GB |
-| Checkpoint per run | 6.3 GB |
-
-Measured on a single [NVIDIA H100 80GB HBM3](https://www.nvidia.com/en-us/data-center/h100/)
-with `openfold3` 0.5.1.dev55, torch 2.10.0 / CUDA 12.9.
-
-Training OpenFold3 is lighter than the phrase suggests: for a run that proves your setup works,
-the dataset is tens of megabytes and the model fits on a mid-range card.
+Everything here is a smoke-test-sized run: a small subset of the PDB, a few minutes, enough to
+confirm the pipeline works end to end and to see losses being logged. The settings to turn it
+into a real run are called out as you go.
 
 ## Three things that cost time to discover
 
@@ -52,8 +36,8 @@ you turn logging on.
 
 ## Running it
 
-Everything below is copy-pasteable. Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU
-(H100/H200 class for these figures), and roughly 25 GB free.
+Everything below is copy-pasteable. Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU, and
+roughly 25 GB free — most of it the pixi environment and the model parameters.
 
 ### 1. Install
 
@@ -130,6 +114,72 @@ Two epochs of four steps, a few minutes. The checkpoint lands in
 `quickstart_run/wandb/offline-run-*/run-*.wandb`. The notebook has a cell that converts that
 binary log to a CSV.
 
+### 4. Monitoring the training curve
+
+The run writes its metrics to a local wandb file. Convert them to a CSV and plot:
+
+```bash
+pixi run -e openfold3-cuda12 python -c "
+import csv, glob, json
+from wandb.proto import wandb_internal_pb2 as pb
+from wandb.sdk.internal import datastore
+
+store = datastore.DataStore()
+store.open_for_scan(glob.glob('quickstart_run/wandb/offline-run-*/run-*.wandb')[0])
+rows = []
+while True:
+    data = store.scan_data()
+    if data is None: break
+    rec = pb.Record(); rec.ParseFromString(data)
+    if rec.WhichOneof('record_type') != 'history': continue
+    row = {i.key or '.'.join(i.nested_key): json.loads(i.value_json) for i in rec.history.item}
+    if 'train/loss' in row: rows.append(row)
+
+cols = ['_step', 'train/loss', 'train/distogram_loss', 'train/diffusion_loss']
+with open('quickstart_run/metrics.csv', 'w', newline='') as f:
+    w = csv.DictWriter(f, fieldnames=cols, extrasaction='ignore'); w.writeheader(); w.writerows(rows)
+print(f'{len(rows)} steps -> quickstart_run/metrics.csv')"
+```
+
+The notebook does this and plots the curve inline. For a quick look from a shell:
+
+```bash
+column -s, -t quickstart_run/metrics.csv
+```
+
+#### Watching it live instead
+
+Offline logging only yields a curve once the run finishes. For a live dashboard — which is what
+you want for long runs, and for the multi-GPU and Slurm stages — use wandb online:
+
+```bash
+pixi run -e openfold3-cuda12 wandb login     # once, needs a wandb account
+```
+
+Then set `offline: false` in the config's `wandb_config` and drop `WANDB_MODE=offline` from the
+launch command. The run streams to your wandb project and the curve updates as it trains.
+
+An already-finished offline run can also be uploaded after the fact:
+
+```bash
+pixi run -e openfold3-cuda12 wandb sync quickstart_run/wandb/offline-run-*
+```
+
+### Running longer
+
+The default is deliberately short — two epochs of four steps, enough to prove the pipeline.
+Eight points is not a curve. To get a trace worth monitoring, raise these in the config:
+
+| Setting | Default here | For a longer run |
+|---|---|---|
+| `data_module_args.epoch_len` | `4` | `50`+ — steps per epoch |
+| `pl_trainer_args.max_epochs` | `2` | `10`+ |
+| `--train-size` on `setup-pdb-subset` | `8` | more structures to sample from |
+
+At roughly 10 s per training step on one H100, 100 steps is about 20 minutes plus validation
+between epochs. Note that loss will not meaningfully descend on a handful of structures however
+long you run — that needs the full dataset.
+
 ### Running the notebook instead
 
 The notebook runs all of the above and keeps the output. Most of its cells are these same
@@ -144,12 +194,19 @@ pixi run -e openfold3-cuda12 python -m ipykernel install --user \
 
 Then edit the `%cd` in its first cell to point at your checkout.
 
-## What a smoke test shows
+## What's next
 
-The training loss does not go down, and the notebook doesn't present it as if it might. Eight
-optimiser steps over eight structures proves the data pipeline, model, loss, backward pass and
-checkpoint writer work together — nothing about convergence. Real training is orders of
-magnitude more steps against the full PDB set.
+| Stage | What changes |
+|---|---|
+| Multiple H100s, one node | `pl_trainer_args.devices: 8`, same launch command |
+| Multi-node via Slurm | `num_nodes: N` plus an `sbatch` submission script |
+
+Both will be added to this guide. Real training also swaps the sampled subset for the full PDB
+set and starts from a config in `examples/training_yamls/`:
+
+```bash
+aws s3 sync s3://openfold3-data/pdb_training_set/ /shared/openfold3/pdb_training_set/ --no-sign-request
+```
 
 ## Links
 
