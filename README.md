@@ -16,24 +16,6 @@ Everything here is a smoke-test-sized run: a small subset of the PDB, a few minu
 confirm the pipeline works end to end and to see losses being logged. The settings to turn it
 into a real run are called out as you go.
 
-## Three things that cost time to discover
-
-**The committed config is a decoy.** `scripts/datasets/train_pdb_subset.yaml` looks like the
-config to use, but it still holds the absolute paths of whoever generated it. The generator
-writes a fresh copy, with your paths, to `datasets/train_pdb_subset.yaml`. The notebook prints
-both side by side.
-
-**A successful run records nothing by default, and the obvious fix doesn't work.**
-`LoggingConfig` accepts Weights & Biases or nothing, and the generated config sets
-`wandb_config: null` — so every loss is computed and thrown away, leaving an empty `logs/`
-directory beside a 6 GB checkpoint. Setting `wandb_config.offline: true` in the YAML is *not*
-enough: the flag never reaches `wandb.init`, which still tries to log in and aborts the run
-before training starts. The environment variable `WANDB_MODE=offline` is what works.
-
-**Enabling logging moves the checkpoint**, from `<output_dir>/checkpoints/` to
-`<output_dir>/<project>/<run id>/checkpoints/`. Anything with a hardcoded path breaks the moment
-you turn logging on.
-
 ## Running it
 
 Everything below is copy-pasteable. Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU, and
@@ -109,7 +91,8 @@ WANDB_MODE=offline pixi run -e openfold3-cuda12 run_openfold train \
     --runner-yaml datasets/quickstart_single_h100.yaml --seed 42
 ```
 
-Two epochs of four steps, a few minutes. The checkpoint lands in
+Two epochs of four steps, a few minutes. Note that enabling logging *moves* the checkpoint:
+without wandb it is `quickstart_run/checkpoints/`, with it
 `quickstart_run/openfold3-quickstart/<run id>/checkpoints/last.ckpt` and the losses in
 `quickstart_run/wandb/offline-run-*/run-*.wandb`. The notebook has a cell that converts that
 binary log to a CSV.
@@ -193,6 +176,16 @@ pixi run -e openfold3-cuda12 python -m ipykernel install --user \
 ```
 
 Then edit the `%cd` in its first cell to point at your checkout.
+
+## If something goes wrong
+
+| Symptom | Cause |
+|---|---|
+| Run exits before training starts, traceback mentions `wandb_login` | `wandb_config.offline: true` does not stop `wandb.init` from attempting a login. Set `WANDB_MODE=offline` in the environment, as above. |
+| Missing-file errors for dataset caches or structures | You pointed `--runner-yaml` at `scripts/datasets/train_pdb_subset.yaml`. That is a committed template holding another user's absolute paths; use the generated `datasets/train_pdb_subset.yaml`. |
+| Training finished but `logs/` is empty and there are no metrics | `LoggingConfig` takes Weights & Biases or nothing, and defaults to `wandb_config: null` — every loss is computed and discarded. Add the `logging_config` block from step 3. |
+| Scripts can't find the checkpoint | Enabling logging moves it from `<output_dir>/checkpoints/` to `<output_dir>/<project>/<run id>/checkpoints/`. |
+| Inference hangs or fails at the MSA stage | `--use-msa-server true` calls the public ColabFold server — check outbound network and their rate limits. |
 
 ## What's next
 
