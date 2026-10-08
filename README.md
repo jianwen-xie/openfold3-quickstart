@@ -53,9 +53,38 @@ pixi run -e openfold3-cuda12 run_openfold predict \
 ```
 
 `--use-msa-server true` uses the public ColabFold server, so this step needs outbound network
-and is subject to their rate limits. Results land in
-`quickstart_inference/ubiquitin/seed_42/` — five diffusion samples, each an mmCIF structure
-with a matching `_confidences.json` holding per-atom `plddt`, plus `pae` and `pde`.
+and is subject to their rate limits.
+
+Results land in `quickstart_inference/ubiquitin/seed_42/`. The structure module is a diffusion
+model, so one run produces **five alternative structures** rather than one — they are separate
+samples, not successive refinements. Per sample:
+
+| File | Contents |
+|---|---|
+| `*_model.cif` | the predicted structure, mmCIF — opens in PyMOL or ChimeraX |
+| `*_confidences_aggregated.json` | per-sample summary: `avg_plddt`, `ptm`, `iptm`, `has_clash`, `sample_ranking_score` |
+| `*_confidences.json` | the full arrays: per-atom `plddt`, and `pae` / `pde` as residue × residue matrices |
+
+**Picking a sample.** Rank by `sample_ranking_score` in the aggregated file:
+
+```bash
+pixi run -e openfold3-cuda12 python -c "
+import glob, json
+for f in sorted(glob.glob('quickstart_inference/ubiquitin/seed_42/*_aggregated.json')):
+    d = json.load(open(f))
+    n = f.split('_sample_')[1].split('_')[0]
+    print(f'sample {n}  score {d[\"sample_ranking_score\"]:.3f}  plddt {d[\"avg_plddt\"]:.1f}'
+          f'  ptm {d[\"ptm\"]:.3f}  clash {d[\"has_clash\"]:.0f}')"
+```
+
+**Reading the numbers.** `plddt` is per-atom confidence from 0 to 100 — above 90 is very high,
+70 to 90 confident, below 50 usually disordered. `ptm` is the predicted TM-score for the whole
+structure; `iptm` is its interface counterpart and is only meaningful for complexes (it reads
+`0.0` for a single chain). `pae` is the predicted aligned error in angstroms: entry (i, j) is
+how far off residue *i* is expected to be if you superimpose on residue *j*, which is what tells
+you whether two domains are confidently placed relative to one another.
+
+Timing per stage is written to `timing.json` in the same directory.
 
 ### Across multiple GPUs
 
