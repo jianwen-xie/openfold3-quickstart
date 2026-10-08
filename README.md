@@ -93,55 +93,48 @@ for f in sorted(glob.glob('quickstart_inference/ubiquitin/seed_42/*_aggregated.j
           f'  ptm {d[\"ptm\"]:.3f}  clash {d[\"has_clash\"]:.0f}')"
 ```
 
-**Seeing it.** The pLDDT values are written into the mmCIF's B-factor column, so the structure
-can be coloured by confidence directly:
+**Seeing it.** OpenFold3 writes pLDDT into the mmCIF's B-factor column, so any viewer can
+colour the structure by confidence:
 
 <p align="center">
-  <img src="assets/ubiquitin_plddt.png" alt="Ubiquitin backbone coloured by pLDDT" width="480">
+  <img src="assets/ubiquitin_cartoon.png" alt="Ubiquitin cartoon with side chains, coloured by pLDDT" width="520">
 </p>
 
-The β-grasp fold is confident throughout (blue), while the C-terminal tail shades to red —
-pLDDT falls to 43 at residue 76. That is the model correctly reporting uncertainty: the tail is
-genuinely flexible in isolation. Low confidence is often the right answer rather than a failure.
+Blue is confident, red is not. The β-grasp fold is resolved throughout, while the C-terminal
+tail trails off to pLDDT 43 at residue 76 — the model correctly reporting that the tail is
+flexible in isolation rather than failing to predict it. Low confidence is frequently the right
+answer.
 
 <details>
 <summary>How this image was made</summary>
 
-```python
-import json, numpy as np, matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Line3DCollection
-import biotite.structure.io.pdbx as pdbx   # already an openfold3 dependency
-
-f = "quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1"
-st = pdbx.get_structure(pdbx.CIFFile.read(f + "_model.cif"), model=1,
-                        extra_fields=["b_factor"])
-ca = st[st.atom_name == "CA"]
-xyz, conf = ca.coord, ca.b_factor          # b_factor holds pLDDT
-
-fig = plt.figure(figsize=(7, 4.2)); ax = fig.add_subplot(111, projection="3d")
-lc = Line3DCollection(np.stack([xyz[:-1], xyz[1:]], axis=1), cmap="RdYlBu",
-                      norm=plt.Normalize(50, 100), linewidths=4)
-lc.set_array((conf[:-1] + conf[1:]) / 2); ax.add_collection3d(lc)
-for axis, i in zip("xyz", range(3)):
-    getattr(ax, f"set_{axis}lim")(xyz[:, i].min() - 1, xyz[:, i].max() + 1)
-ax.set_box_aspect(np.ptp(xyz, axis=0)); ax.view_init(elev=18, azim=-62); ax.set_axis_off()
-fig.colorbar(lc, ax=ax, shrink=.55).set_label("pLDDT")
-plt.savefig("ubiquitin_plddt.png", dpi=130, bbox_inches="tight", facecolor="white")
-```
-
-This is a Cα trace. For an interactive cartoon in a live notebook, `pip install py3Dmol` and
-colour by the same B-factor column:
+Rendered with [3Dmol.js](https://3dmol.csb.pitt.edu/) — the engine behind `py3Dmol`. In a live
+notebook, `pip install py3Dmol` and this gives you the same view, rotatable:
 
 ```python
 import py3Dmol
-view = py3Dmol.view(width=600, height=450)
-view.addModel(open(f + "_model.cif").read(), "cif")
-view.setStyle({"cartoon": {"colorscheme":
-    {"prop": "b", "gradient": "roygb", "min": 50, "max": 100}}})
-view.zoomTo(); view.show()
+
+cif = open("quickstart_inference/ubiquitin/seed_42/"
+           "ubiquitin_seed_42_sample_1_model.cif").read()
+colour = {"prop": "b", "gradient": "roygb", "min": 50, "max": 100}
+
+view = py3Dmol.view(width=900, height=700)
+view.addModel(cif, "cif")
+view.setStyle({}, {"cartoon": {"colorscheme": colour, "thickness": 0.35}})
+view.addStyle({"not": {"atom": ["N", "C", "O"]}},
+              {"stick": {"radius": 0.12, "colorscheme": colour}})
+view.zoomTo(); view.rotate(110, "y"); view.zoom(1.3)
+view.show()
 ```
 
-py3Dmol is a JavaScript widget, so it will not render on GitHub — hence the static image above.
+py3Dmol is a JavaScript widget, so it renders in a running notebook but not on GitHub. The
+static image above was produced by putting the same 3Dmol.js calls in an HTML page and
+screenshotting it headless:
+
+```bash
+google-chrome --headless --disable-gpu --screenshot=out.png \
+    --window-size=1400,1100 --virtual-time-budget=25000 file:///tmp/view.html
+```
 
 </details>
 
