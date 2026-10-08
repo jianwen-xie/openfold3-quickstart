@@ -1,27 +1,25 @@
 # OpenFold3 Quickstart
 
-Run [OpenFold3](https://github.com/aqlaboratory/openfold-3) training and inference, and watch
-the training curve. This is the **single-GPU** stage; multi-GPU and Slurm multi-node follow.
+Run [OpenFold3](https://github.com/aqlaboratory/openfold-3) inference and training, and watch
+the training curve.
 
-**[→ Open `quickstart.ipynb`](quickstart.ipynb)** — the same steps, executed, with outputs
+**[→ Open `quickstart.ipynb`](quickstart.ipynb)** — the single-GPU path, executed, with outputs
 kept so you can read them without a GPU.
 
-| Stage | Status |
-|---|---|
-| Single H100 | this guide |
-| Multiple H100s on one node | to follow |
-| Multi-node via Slurm | to follow |
+| Stage | Inference | Training |
+|---|---|---|
+| One GPU | documented, executed | documented, executed |
+| Multiple GPUs, one node | to follow | to follow |
+| Multiple nodes (Slurm) | to follow | to follow |
 
 Everything here is a smoke-test-sized run: a small subset of the PDB, a few minutes, enough to
 confirm the pipeline works end to end and to see losses being logged. The settings to turn it
 into a real run are called out as you go.
 
-## Running it
+Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU, and roughly 25 GB free — most of it the pixi
+environment and the model parameters.
 
-Everything below is copy-pasteable. Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU, and
-roughly 25 GB free — most of it the pixi environment and the model parameters.
-
-### 1. Install
+## Install
 
 ```bash
 git clone https://github.com/aqlaboratory/openfold-3.git
@@ -40,7 +38,9 @@ Check it worked:
 pixi run -e openfold3-cuda12 python -c "import torch; print(torch.cuda.get_device_name(0))"
 ```
 
-### 2. Inference
+## Inference
+
+### On one GPU
 
 Predict a structure from sequence. The repo ships example queries; ubiquitin is the smallest
 at 76 residues.
@@ -57,7 +57,16 @@ and is subject to their rate limits. Results land in
 `quickstart_inference/ubiquitin/seed_42/` — five diffusion samples, each an mmCIF structure
 with a matching `_confidences.json` holding per-atom `plddt`, plus `pae` and `pde`.
 
-### 3. Training
+### Across multiple GPUs
+
+*To follow.* OpenFold3 distributes a multi-query job across GPUs — parallel across queries,
+not within a single structure. See the upstream
+[inference docs](https://openfold-3.readthedocs.io/en/latest/inference.html#inference-run-on-multiple-gpus)
+in the meantime.
+
+## Training
+
+### On one GPU
 
 Sample a small subset and download only those structures — 8 training and 4 validation by
 default, about 71 MB. The first run also pulls a 1.6 GB index to sample from, which is not
@@ -97,7 +106,7 @@ without wandb it is `quickstart_run/checkpoints/`, with it
 `quickstart_run/wandb/offline-run-*/run-*.wandb`. The notebook has a cell that converts that
 binary log to a CSV.
 
-### 4. Monitoring the training curve
+### Monitoring the training curve
 
 The run writes its metrics to a local wandb file. Convert them to a CSV and plot:
 
@@ -163,7 +172,27 @@ At roughly 10 s per training step on one H100, 100 steps is about 20 minutes plu
 between epochs. Note that loss will not meaningfully descend on a handful of structures however
 long you run — that needs the full dataset.
 
-### Running the notebook instead
+### Training on the full dataset
+
+The subset above exists so the pipeline can be proven quickly. Real training swaps it for the
+full PDB set and starts from one of the configs in `examples/training_yamls/` —
+`initial_training.yml` through `finetune_3.yml` — which carry real schedules rather than a
+two-epoch smoke test.
+
+```bash
+aws s3 sync s3://openfold3-data/pdb_training_set/ /shared/openfold3/pdb_training_set/ --no-sign-request
+```
+
+### Across multiple GPUs, one node
+
+*To follow.* Set `pl_trainer_args.devices: 8`; the launch command is unchanged.
+
+### Across multiple nodes (Slurm)
+
+*To follow.* Set `pl_trainer_args.num_nodes: N` and submit with `sbatch`. Submission scripts
+will live in `slurm/`.
+
+## Running the notebook instead
 
 The notebook runs all of the above and keeps the output. Most of its cells are these same
 shell commands; two are Python analysis, and one imports `wandb`, so the pixi environment is
@@ -187,20 +216,6 @@ Then edit the `%cd` in its first cell to point at your checkout.
 | Scripts can't find the checkpoint | Enabling logging moves it from `<output_dir>/checkpoints/` to `<output_dir>/<project>/<run id>/checkpoints/`. |
 | Inference hangs or fails at the MSA stage | `--use-msa-server true` calls the public ColabFold server — check outbound network and their rate limits. |
 
-## What's next
-
-| Stage | What changes |
-|---|---|
-| Multiple H100s, one node | `pl_trainer_args.devices: 8`, same launch command |
-| Multi-node via Slurm | `num_nodes: N` plus an `sbatch` submission script |
-
-Both will be added to this guide. Real training also swaps the sampled subset for the full PDB
-set and starts from a config in `examples/training_yamls/`:
-
-```bash
-aws s3 sync s3://openfold3-data/pdb_training_set/ /shared/openfold3/pdb_training_set/ --no-sign-request
-```
-
 ## Links
 
 - OpenFold3: <https://github.com/aqlaboratory/openfold-3>
@@ -211,3 +226,4 @@ aws s3 sync s3://openfold3-data/pdb_training_set/ /shared/openfold3/pdb_training
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE).
+
