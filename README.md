@@ -55,9 +55,25 @@ pixi run -e openfold3-cuda12 run_openfold predict \
 `--use-msa-server true` uses the public ColabFold server, so this step needs outbound network
 and is subject to their rate limits.
 
-Results land in `quickstart_inference/ubiquitin/seed_42/`. The structure module is a diffusion
-model, so one run produces **five alternative structures** rather than one — they are separate
-samples, not successive refinements. Per sample:
+Results land under the `--output-dir` you passed, in a directory named after the query key and
+the seed:
+
+```
+quickstart_inference/
+├── ubiquitin/seed_42/              ← query key / seed
+│   ├── ..._sample_1_model.cif                      the structure
+│   ├── ..._sample_1_confidences.json               full arrays
+│   ├── ..._sample_1_confidences_aggregated.json    summary -- rank on this
+│   ├── ...                                         (×5 samples)
+│   └── timing.json
+├── msas/                           alignments fetched from ColabFold
+├── summary.txt                     queries succeeded / failed
+├── model_config.json               fully-resolved config
+└── openfold3_intermediates/
+```
+
+The structure module is a diffusion model, so one run produces **five alternative structures**
+rather than one — they are separate samples, not successive refinements. Per sample:
 
 | File | Contents |
 |---|---|
@@ -129,11 +145,22 @@ WANDB_MODE=offline pixi run -e openfold3-cuda12 run_openfold train \
     --runner-yaml datasets/quickstart_single_h100.yaml --seed 42
 ```
 
-Two epochs of four steps, a few minutes. Note that enabling logging *moves* the checkpoint:
-without wandb it is `quickstart_run/checkpoints/`, with it
-`quickstart_run/openfold3-quickstart/<run id>/checkpoints/last.ckpt` and the losses in
-`quickstart_run/wandb/offline-run-*/run-*.wandb`. The notebook has a cell that converts that
-binary log to a CSV.
+Two epochs of four steps, a few minutes. Output goes to the `output_dir` set in the config:
+
+```
+quickstart_run/
+├── openfold3-quickstart/<run id>/checkpoints/
+│   └── last.ckpt                   the model, ~6 GB
+├── wandb/offline-run-<ts>-<run id>/
+│   ├── run-<run id>.wandb          the losses -- binary, see the next section
+│   └── files/                      resolved configs, package versions
+└── logs/                           always empty
+```
+
+Two things to know about that layout. Enabling logging **moves the checkpoint**: without wandb
+it is simply `quickstart_run/checkpoints/`, so anything with a hardcoded path breaks the moment
+you turn logging on. And `logs/` looks like where you would check what happened, but never
+contains anything — the metrics are only inside the binary `.wandb` file.
 
 ### Monitoring the training curve
 
