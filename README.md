@@ -138,6 +138,49 @@ google-chrome --headless --disable-gpu --screenshot=out.png \
 
 </details>
 
+**Checking it against the experiment.** Ubiquitin has a well-known crystal structure
+([1UBQ](https://www.rcsb.org/structure/1UBQ), 1.8 Å), so the prediction can be scored rather
+than merely admired:
+
+<p align="center">
+  <img src="assets/ubiquitin_vs_1ubq.png" alt="Prediction superposed on the 1UBQ crystal structure" width="420">
+</p>
+
+Prediction in navy, crystal structure in grey.
+
+| Superposition | Cα RMSD |
+|---|---|
+| All 76 residues | 0.73 Å |
+| Residues 1–72, excluding the flexible tail | 0.44 Å |
+
+Sub-ångström over the folded core — and the gap between the two rows is the C-terminal tail,
+exactly the region pLDDT marked as uncertain. The confidence estimate predicted where the error
+would be before any reference was consulted.
+
+<details>
+<summary>How to score a prediction against a reference</summary>
+
+```python
+import biotite.structure as struc
+import biotite.structure.io.pdbx as pdbx
+
+pred = pdbx.get_structure(pdbx.CIFFile.read(
+    "quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif"), model=1)
+ref = pdbx.get_structure(pdbx.CIFFile.read("1ubq.cif"), model=1)
+ref = ref[struc.filter_amino_acids(ref) & ~ref.hetero]      # drop waters and ligands
+
+pred_ca, ref_ca = pred[pred.atom_name == "CA"], ref[ref.atom_name == "CA"]
+fitted, transform = struc.superimpose(ref_ca, pred_ca)
+print(f"RMSD {struc.rmsd(ref_ca, fitted):.2f} A")
+
+pred_fitted = transform.apply(pred)                          # for rendering the overlay
+```
+
+Get the reference with `curl -O https://files.rcsb.org/download/1UBQ.cif`. This works because
+the residue numbering matches one to one; different constructs need a sequence alignment first.
+
+</details>
+
 **Reading the numbers.** `plddt` is per-atom confidence from 0 to 100 — above 90 is very high,
 70 to 90 confident, below 50 usually disordered. `ptm` is the predicted TM-score for the whole
 structure; `iptm` is its interface counterpart and is only meaningful for complexes (it reads
