@@ -100,40 +100,59 @@ colour the structure by confidence:
   <img src="assets/ubiquitin_cartoon.png" alt="Ubiquitin cartoon with side chains, coloured by pLDDT" width="520">
 </p>
 
-Blue is confident, red is not. The β-grasp fold is resolved throughout, while the C-terminal
-tail trails off to pLDDT 43 at residue 76 — the model correctly reporting that the tail is
-flexible in isolation rather than failing to predict it. Low confidence is frequently the right
-answer.
+Coloured by [AlphaFold's four confidence bands](https://www.ebi.ac.uk/training/online/courses/alphafold/inputs-and-outputs/evaluating-alphafolds-predicted-structures-using-confidence-scores/plddt-understanding-local-confidence/):
+dark blue ≥ 90 (very high), cyan 70–90 (confident), yellow 50–70 (low), orange < 50 (very low).
+
+The β-grasp fold is dark blue throughout, while the C-terminal tail runs through yellow into
+orange — pLDDT falls to 43 at residue 76. That is the model correctly reporting that the tail
+is flexible in isolation rather than failing to predict it. Low confidence is frequently the
+right answer.
 
 <details>
 <summary>How this image was made</summary>
 
-Rendered with [3Dmol.js](https://3dmol.csb.pitt.edu/) — the engine behind `py3Dmol`. In a live
-notebook, `pip install py3Dmol` and this gives you the same view, rotatable:
+Rendered with [3Dmol.js](https://3dmol.csb.pitt.edu/) — the engine behind `py3Dmol`. The four
+bands need a colour function, because 3Dmol has no selection syntax for B-factor ranges:
 
-```python
-import py3Dmol
-
-cif = open("quickstart_inference/ubiquitin/seed_42/"
-           "ubiquitin_seed_42_sample_1_model.cif").read()
-colour = {"prop": "b", "gradient": "roygb", "min": 50, "max": 100}
-
-view = py3Dmol.view(width=900, height=700)
-view.addModel(cif, "cif")
-view.setStyle({}, {"cartoon": {"colorscheme": colour, "thickness": 0.35}})
-view.addStyle({"not": {"atom": ["N", "C", "O"]}},
-              {"stick": {"radius": 0.12, "colorscheme": colour}})
-view.zoomTo(); view.rotate(110, "y"); view.zoom(1.3)
-view.show()
+```html
+<script src="https://3dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+<div id="v" style="width:1400px;height:1100px;position:relative"></div>
+<script>
+function band(atom) {               // pLDDT lives in the B-factor column
+  if (atom.b >= 90) return "#0053D6";   // very high
+  if (atom.b >= 70) return "#65CBF3";   // confident
+  if (atom.b >= 50) return "#FFDB13";   // low
+  return "#FF7D45";                     // very low
+}
+const v = $3Dmol.createViewer("v", {backgroundColor: "white"});
+v.addModel(cifText, "cif");
+v.setStyle({}, {cartoon: {colorfunc: band, thickness: 0.35}});
+v.addStyle({not: {atom: ["N", "C", "O"]}}, {stick: {radius: 0.12, colorfunc: band}});
+v.zoomTo(); v.rotate(110, "y"); v.zoom(1.3); v.render();
+</script>
 ```
 
 py3Dmol is a JavaScript widget, so it renders in a running notebook but not on GitHub. The
-static image above was produced by putting the same 3Dmol.js calls in an HTML page and
-screenshotting it headless:
+static image above came from putting the above in an HTML page and screenshotting it:
 
 ```bash
 google-chrome --headless --disable-gpu --screenshot=out.png \
     --window-size=1400,1100 --virtual-time-budget=25000 file:///tmp/view.html
+```
+
+`--virtual-time-budget` matters — without it the screenshot fires before WebGL has drawn
+anything and you get a blank canvas.
+
+From Python, `py3Dmol` cannot pass a JS function, so the closest one-liner is a continuous
+ramp rather than the four bands:
+
+```python
+import py3Dmol
+view = py3Dmol.view(width=900, height=700)
+view.addModel(open("..._model.cif").read(), "cif")
+view.setStyle({}, {"cartoon": {"colorscheme":
+    {"prop": "b", "gradient": "roygb", "min": 50, "max": 100}}})
+view.zoomTo(); view.show()
 ```
 
 </details>
