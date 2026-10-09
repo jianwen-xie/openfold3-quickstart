@@ -16,6 +16,10 @@ Everything here is a smoke-test-sized run: a small subset of the PDB, a few minu
 confirm the pipeline works end to end and to see losses being logged. The settings to turn it
 into a real run are called out as you go.
 
+Inference is worked through three kinds of input — a single protein, a protein with a ligand,
+and a multi-chain complex — each scored against its crystal structure, because the confidence
+metrics worth reading differ in each case.
+
 Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU, and roughly 25 GB free — most of it the pixi
 environment and the model parameters.
 
@@ -92,6 +96,15 @@ for f in sorted(glob.glob('quickstart_inference/ubiquitin/seed_42/*_aggregated.j
     print(f'sample {n}  score {d[\"sample_ranking_score\"]:.3f}  plddt {d[\"avg_plddt\"]:.1f}'
           f'  ptm {d[\"ptm\"]:.3f}  clash {d[\"has_clash\"]:.0f}')"
 ```
+
+Everything above is the same for any query. What differs between inputs is which of these
+numbers is worth looking at, so the rest of this section walks three kinds of input: a single
+protein, a protein with a ligand, and a multi-chain complex.
+
+#### A single protein
+
+Ubiquitin, as launched above. For a single chain, pLDDT is the figure that matters — there are
+no interfaces, so `iptm` reads `0.0` and carries no information.
 
 **Seeing it.** OpenFold3 writes pLDDT into the mmCIF's B-factor column, so any viewer can
 colour the structure by confidence:
@@ -209,11 +222,12 @@ you whether two domains are confidently placed relative to one another.
 
 Timing per stage is written to `timing.json` in the same directory.
 
-### Co-folding a protein with a ligand
+#### A protein with a ligand
 
 Ubiquitin is a single chain — the easy case, and the one AlphaFold2 already handled. What
-AlphaFold3-style models add is **co-folding**: predicting a complex and its partners together.
-The repo ships an example that does this, and whose name is the PDB entry it reproduces:
+AlphaFold3-style models add is **co-folding**: predicting a structure and its partners
+together. The simplest version of that is one protein plus one small molecule. The repo ships
+an example that does this, and whose name is the PDB entry it reproduces:
 
 ```bash
 pixi run -e openfold3-cuda12 run_openfold predict \
@@ -229,13 +243,9 @@ The query is T4 lysozyme L99A (164 residues) plus toluene, given as SMILES (`Cc1
 than a sequence. The reference is [7L39](https://www.rcsb.org/structure/7L39) at 1.35 Å — the
 classic model system for ligand binding in a buried hydrophobic cavity.
 
-<p align="center">
-  <img src="assets/lysozyme_confidence.png" alt="Predicted complex coloured by pLDDT" width="300">
-</p>
-
-Confidence first, in the same four bands as before — and this time it is one flat colour.
-96.3% of atoms score ≥ 90 and the minimum is 68.6, so there is no uncertain region to find.
-Ubiquitin, by contrast, spans all four bands and its tail runs to orange.
+Confidence is not the interesting question here — lysozyme folds correctly either way, and
+96.3% of atoms score ≥ 90. What matters is whether the ligand found the right pocket in the
+right pose, so the figure to look at is the superposition:
 
 <p align="center">
   <img src="assets/lysozyme_toluene.png" alt="Predicted lysozyme-toluene complex superposed on 7L39" width="560">
@@ -256,13 +266,11 @@ ligand entirely.
 | Toluene centroid vs. crystallographic position | 0.33 Å |
 | `avg_plddt` / `ptm` / `iptm` | 97.8 / 0.98 / 0.94 |
 
-Two things to notice. The interesting question here is not whether the backbone is right —
-lysozyme folds correctly either way — but whether the ligand found the right pocket in the right
-pose. It did, to within a third of an ångström.
+The ligand found the right pocket in the right pose, to within a third of an ångström.
 
-And `iptm` is finally meaningful. It read `0.0` for ubiquitin because a single chain has no
-interface; here it scores the protein–ligand interface at 0.94. For complexes, `iptm` is the
-number to watch, not `ptm`.
+Note also that `iptm` is finally meaningful. It read `0.0` for ubiquitin because a single chain
+has no interface; here it scores the protein–ligand interface at 0.94. For anything with more
+than one component, `iptm` is the number to watch, not `ptm`.
 
 <details>
 <summary>How this image was made</summary>
@@ -310,6 +318,119 @@ v.addStyle({model:0, within:{distance:6.0, sel:{resn:"MBN"}}, hetflag:false},
            {stick:{radius:0.10, color:"#999999"}});
 v.zoomTo({model:0, resn:"MBN"}); v.zoom(0.62); v.render();
 ```
+
+</details>
+
+#### Co-folding a complex
+
+The ligand case has a single protein chain. The harder version is several chains that have to
+fold *and* find their arrangement with one another. The repo ships one:
+
+```bash
+pixi run -e openfold3-cuda12 run_openfold predict \
+    --query-json examples/example_inference_inputs/query_multimer.json \
+    --use-msa-server true \
+    --output-dir ./quickstart_multimer
+```
+
+The query is phosphatidylserine decarboxylase from *E. coli*, reproducing
+[7CNX](https://www.rcsb.org/structure/7CNX) at 2.63 Å. Two sequences, four chains: a
+253-residue β subunit supplied as chains `A` and `C`, and a 42-residue α subunit as `B` and
+`D`. The two come from a single precursor that cleaves itself in half — which the crystal's
+numbering still records, with β running 1–253 and α picking up at 255.
+
+<p align="center">
+  <img src="assets/psd_chains.png" alt="Predicted assembly, one colour per chain" width="320">
+</p>
+
+One colour per chain: β subunits in dark and light blue (`A`, `C`), α subunits in red and
+orange (`B`, `D`). Each small α subunit packs against its own β partner, and the two αβ
+heterodimers meet through a β–β interface in the middle. Getting this right means getting four
+chains and three distinct interfaces right at once.
+
+<p align="center">
+  <img src="assets/psd_vs_7cnx.png" alt="Predicted assembly superposed on the 7CNX crystal structure" width="320">
+</p>
+
+Prediction in navy, crystal structure in grey, same orientation as above.
+
+| Superposition | Cα RMSD |
+|---|---|
+| All four chains at once | 0.57 Å over 557 residues |
+| β subunit `A` alone | 0.29 Å over 246 residues |
+| β subunit `C` alone | 0.35 Å over 240 residues |
+| α subunit `B` alone | 1.11 Å over 38 residues |
+| α subunit `D` alone | 0.20 Å over 33 residues |
+
+The first row is the one that matters. Superposing all four chains together scores the folds
+*and* their arrangement at the same time, so 0.57 Å means the assembly is right — not merely
+four chains that are each correct but wrongly placed. The navy helix on the left with no grey
+beneath it is a stretch the crystal never resolved; the reference chain starts at residue 8.
+
+**Reading `chain_pair_iptm`.** Overall the run scores `avg_plddt` 92.8, `ptm` 0.90, `iptm` 0.89
+and no clashes. But the aggregated file also scores every *pair* of chains separately, and this
+is where a complex tells you more than any single number can:
+
+| | measured closest approach | `chain_pair_iptm` |
+|---|---|---|
+| `(A, B)`, `(C, D)` — α against its own β | 2.7 Å | 0.96 |
+| `(A, C)` — the β–β interface | 2.6 Å | 0.85 |
+| `(A, D)`, `(B, C)` — across the assembly | 11.4 Å | 0.78 |
+| `(B, D)` — the two α subunits | 27.1 Å | 0.54 |
+
+The low score is the interesting one, and it is not a warning. `(B, D)` reads 0.54 because
+those two chains sit 27 Å apart and never touch — the metric is scoring an interface that does
+not exist. A low `chain_pair_iptm` means *this pair is not confidently placed relative to each
+other*, which for a non-contacting pair is both true and harmless. Check it against the
+geometry before treating it as a failure.
+
+<details>
+<summary>How these images were made</summary>
+
+The prediction and the crystal number their chains differently — the α subunit is 1–42 in the
+prediction and 255–292 in the reference — so matching on residue ID alone silently drops both
+α chains and leaves you scoring only the β subunits. Find the offset per chain rather than
+assuming one:
+
+```python
+import numpy as np, biotite.structure as struc, biotite.structure.io.pdbx as pdbx
+
+def ca(path):
+    a = pdbx.get_structure(pdbx.CIFFile.read(path), model=1)
+    a = a[struc.filter_amino_acids(a) & ~a.hetero]
+    return a[a.atom_name == "CA"]
+
+pred, ref = ca("..._sample_1_model.cif"), ca("7cnx.cif")
+
+offsets = {}
+for ch in "ABCD":
+    p, r = pred[pred.chain_id == ch], ref[ref.chain_id == ch]
+    pm = dict(zip(p.res_id.tolist(), p.res_name))
+    rm = dict(zip(r.res_id.tolist(), r.res_name))
+    offsets[ch] = max(range(-5, 300),
+                      key=lambda o: sum(pm[i] == rm[i + o] for i in pm if i + o in rm))
+# -> {"A": 0, "B": 253, "C": 0, "D": 253}, each matching at 100% residue identity
+```
+
+7CNX holds two copies of the tetramer in its asymmetric unit (chains `A`–`H`); `A`–`D` are the
+copy that corresponds. Superpose on all four chains at once, then apply that one transform to
+every atom so both figures end up in the same frame:
+
+```python
+fitted, transform = struc.superimpose(ref_coords, pred_coords)
+pred_fit = transform.apply(pred_full)
+```
+
+Render as before. The chain figure needs no colour function, just one colour per selection:
+
+```js
+v.setStyle({chain: "A"}, {cartoon: {color: "#27408B", thickness: 0.30}});
+v.setStyle({chain: "C"}, {cartoon: {color: "#7FB2E5", thickness: 0.30}});
+v.setStyle({chain: "B"}, {cartoon: {color: "#C2461E", thickness: 0.42}});
+v.setStyle({chain: "D"}, {cartoon: {color: "#F0A33C", thickness: 0.42}});
+```
+
+The α subunits are drawn thicker so a 42-residue chain stays visible next to a 253-residue one.
 
 </details>
 
