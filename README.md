@@ -230,12 +230,25 @@ than a sequence. The reference is [7L39](https://www.rcsb.org/structure/7L39) at
 classic model system for ligand binding in a buried hydrophobic cavity.
 
 <p align="center">
+  <img src="assets/lysozyme_confidence.png" alt="Predicted complex coloured by pLDDT" width="300">
+</p>
+
+Confidence first, in the same four bands as before — and this time it is one flat colour.
+96.3% of atoms score ≥ 90 and the minimum is 68.6, so there is no uncertain region to find.
+Ubiquitin, by contrast, spans all four bands and its tail runs to orange.
+
+<p align="center">
   <img src="assets/lysozyme_toluene.png" alt="Predicted lysozyme-toluene complex superposed on 7L39" width="560">
 </p>
 
-Prediction in navy, crystal structure in grey. Left: the whole complex. Right: the cavity, with
-the predicted toluene (blue sticks) on top of the crystallographic one (grey), surrounded by the
-side chains lining the pocket.
+Prediction in navy, crystal structure in grey.
+
+**Left:** the whole complex superposed. **Right:** a close-up of the binding cavity, looking at
+the toluene itself. The **blue ring is the predicted ligand** and the **black ring directly
+beneath it is the crystallographic one** — they overlap almost exactly, which is the 0.33 Å in
+the table below. The faint grey sticks are the side chains lining the pocket, and the protein
+is drawn at 30% opacity because the cavity is buried and an opaque ribbon would hide the
+ligand entirely.
 
 | | |
 |---|---|
@@ -250,10 +263,6 @@ pose. It did, to within a third of an ångström.
 And `iptm` is finally meaningful. It read `0.0` for ubiquitin because a single chain has no
 interface; here it scores the protein–ligand interface at 0.94. For complexes, `iptm` is the
 number to watch, not `ptm`.
-
-There is no confidence-coloured render for this one because there would be nothing to see:
-96.3% of atoms score ≥ 90 and the minimum is 68.6, so the whole structure is one shade of dark
-blue. Ubiquitin spans all four bands, which is what makes that figure worth looking at.
 
 <details>
 <summary>How this image was made</summary>
