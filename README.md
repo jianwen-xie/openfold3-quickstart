@@ -73,7 +73,7 @@ quickstart_inference/
 ```
 
 The structure module is a diffusion model, so one run produces **five alternative structures**
-rather than one — they are separate samples, not successive refinements. Per sample:
+rather than one. Per sample:
 
 | File | Contents |
 |---|---|
