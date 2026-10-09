@@ -3,7 +3,7 @@
 Run [OpenFold3](https://github.com/aqlaboratory/openfold-3) inference and training, and watch
 the training curve.
 
-**[→ Open `quickstart.ipynb`](quickstart.ipynb)** — the single-GPU path, executed, with outputs
+**[→ Open `quickstart.ipynb`](quickstart.ipynb)**: the single-GPU path, executed, with outputs
 kept so you can read them without a GPU.
 
 | Stage | Inference | Training |
@@ -16,11 +16,11 @@ Everything here is a smoke-test-sized run: a small subset of the PDB, a few minu
 confirm the pipeline works end to end and to see losses being logged. The settings to turn it
 into a real run are called out as you go.
 
-Inference is worked through three kinds of input — a single protein, a protein with a ligand,
-and a multi-chain complex — each scored against its crystal structure, because the confidence
+Inference is worked through three kinds of input (a single protein, a protein with a ligand,
+and a multi-chain complex), each scored against its crystal structure, because the confidence
 metrics worth reading differ in each case.
 
-Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU, and roughly 25 GB free — most of it the pixi
+Needs [pixi](https://pixi.sh) 0.80+, a CUDA GPU, and roughly 25 GB free, most of it the pixi
 environment and the model parameters.
 
 ## Install
@@ -81,7 +81,7 @@ rather than one. Per sample:
 
 | File | Contents |
 |---|---|
-| `*_model.cif` | the predicted structure, mmCIF — opens in PyMOL or ChimeraX |
+| `*_model.cif` | the predicted structure, mmCIF; opens in PyMOL or ChimeraX |
 | `*_confidences_aggregated.json` | per-sample summary: `avg_plddt`, `ptm`, `iptm`, `has_clash`, `sample_ranking_score` |
 | `*_confidences.json` | the full arrays: per-atom `plddt`, and `pae` / `pde` as residue × residue matrices |
 
@@ -100,13 +100,13 @@ for f in sorted(glob.glob('quickstart_inference/ubiquitin/seed_42/*_aggregated.j
 Everything above is the same for any query. What differs between inputs is which of these
 numbers is worth looking at, so the rest of this section works three examples:
 
-1. **A single protein** — ubiquitin. Read pLDDT.
-2. **A protein with a ligand** — T4 lysozyme and toluene. Read the ligand pose.
-3. **Co-folding a complex** — a four-chain assembly. Read `iptm` and `chain_pair_iptm`.
+1. **A single protein**: ubiquitin. Read pLDDT.
+2. **A protein with a ligand**: T4 lysozyme and toluene. Read the ligand pose.
+3. **Co-folding a complex**: a four-chain assembly. Read `iptm` and `chain_pair_iptm`.
 
 #### (1) A single protein
 
-Ubiquitin, as launched above. For a single chain, pLDDT is the figure that matters — there are
+Ubiquitin, as launched above. For a single chain, pLDDT is the figure that matters. There are
 no interfaces, so `iptm` reads `0.0` and carries no information.
 
 **Seeing it.** OpenFold3 writes pLDDT into the mmCIF's B-factor column, so any viewer can
@@ -120,14 +120,14 @@ Coloured by [AlphaFold's four confidence bands](https://www.ebi.ac.uk/training/o
 dark blue ≥ 90 (very high), cyan 70–90 (confident), yellow 50–70 (low), orange < 50 (very low).
 
 The β-grasp fold is dark blue throughout, while the C-terminal tail runs through yellow into
-orange — pLDDT falls to 43 at residue 76. That is the model correctly reporting that the tail
+orange, with pLDDT falling to 43 at residue 76. That is the model correctly reporting that the tail
 is flexible in isolation rather than failing to predict it. Low confidence is frequently the
 right answer.
 
 <details>
 <summary>How this image was made</summary>
 
-Rendered with [3Dmol.js](https://3dmol.csb.pitt.edu/) — the engine behind `py3Dmol`. The four
+Rendered with [3Dmol.js](https://3dmol.csb.pitt.edu/), the engine behind `py3Dmol`. The four
 bands need a colour function, because 3Dmol has no selection syntax for B-factor ranges:
 
 ```html
@@ -148,8 +148,8 @@ v.zoomTo(); v.rotate(60, "y"); v.zoom(1.3); v.render();
 </script>
 ```
 
-`cifText` here is the prediction after it has been superposed onto the reference — the
-`pred_fitted` produced in the next section — so that this figure and the superposition below
+`cifText` here is the prediction after it has been superposed onto the reference (the
+`pred_fitted` produced in the next section), so that this figure and the superposition below
 look at the molecule from the same angle. Rendering the raw file instead gives the same
 colours in a different orientation, which makes the two figures hard to compare.
 
@@ -161,7 +161,7 @@ google-chrome --headless --disable-gpu --screenshot=out.png \
     --window-size=1400,1100 --virtual-time-budget=25000 file:///tmp/view.html
 ```
 
-`--virtual-time-budget` matters — without it the screenshot fires before WebGL has drawn
+`--virtual-time-budget` matters: without it the screenshot fires before WebGL has drawn
 anything and you get a blank canvas.
 
 From Python, `py3Dmol` cannot pass a JS function, so the closest one-liner is a continuous
@@ -193,7 +193,7 @@ Prediction in navy, crystal structure in grey.
 | All 76 residues | 0.73 Å |
 | Residues 1–72, excluding the flexible tail | 0.44 Å |
 
-Sub-ångström over the folded core — and the gap between the two rows is the C-terminal tail,
+Sub-ångström over the folded core, and the gap between the two rows is the C-terminal tail,
 exactly the region pLDDT marked as uncertain. The confidence estimate predicted where the error
 would be before any reference was consulted.
 
@@ -226,7 +226,7 @@ the residue numbering matches one to one; different constructs need a sequence a
 
 </details>
 
-**Reading the numbers.** `plddt` is per-atom confidence from 0 to 100 — above 90 is very high,
+**Reading the numbers.** `plddt` is per-atom confidence from 0 to 100: above 90 is very high,
 70 to 90 confident, below 50 usually disordered. `ptm` is the predicted TM-score for the whole
 structure; `iptm` is its interface counterpart and is only meaningful for complexes (it reads
 `0.0` for a single chain). `pae` is the predicted aligned error in angstroms: entry (i, j) is
@@ -237,7 +237,7 @@ Timing per stage is written to `timing.json` in the same directory.
 
 #### (2) A protein with a ligand
 
-Ubiquitin is a single chain — the easy case, and the one AlphaFold2 already handled. What
+Ubiquitin is a single chain, the easy case, and the one AlphaFold2 already handled. What
 AlphaFold3-style models add is **co-folding**: predicting a structure and its partners
 together. The simplest version of that is one protein plus one small molecule. The repo ships
 an example that does this, and whose name is the PDB entry it reproduces:
@@ -249,14 +249,14 @@ pixi run -e openfold3-cuda12 run_openfold predict \
     --output-dir ./quickstart_cofold
 ```
 
-The output layout, the five samples and the ranking step are all as described above — only
+The output layout, the five samples and the ranking step are all as described above. Only
 what differs is shown here.
 
 The query is T4 lysozyme L99A (164 residues) plus toluene, given as SMILES (`Cc1ccccc1`) rather
-than a sequence. The reference is [7L39](https://www.rcsb.org/structure/7L39) at 1.35 Å — the
+than a sequence. The reference is [7L39](https://www.rcsb.org/structure/7L39) at 1.35 Å, the
 classic model system for ligand binding in a buried hydrophobic cavity.
 
-Confidence is not the interesting question here — lysozyme folds correctly either way, and
+Confidence is not the interesting question here: lysozyme folds correctly either way, and
 96.3% of atoms score ≥ 90. What matters is whether the ligand found the right pocket in the
 right pose, so the figure to look at is the superposition:
 
@@ -268,7 +268,7 @@ Prediction in navy, crystal structure in grey.
 
 **Left:** the whole complex superposed. **Right:** a close-up of the binding cavity, looking at
 the toluene itself. The **blue ring is the predicted ligand** and the **black ring directly
-beneath it is the crystallographic one** — they overlap almost exactly, which is the 0.33 Å in
+beneath it is the crystallographic one**. They overlap almost exactly, which is the 0.33 Å in
 the table below. The faint grey sticks are the side chains lining the pocket, and the protein
 is drawn at 30% opacity because the cavity is buried and an opaque ribbon would hide the
 ligand entirely.
@@ -280,9 +280,9 @@ ligand entirely.
 
 The ligand found the right pocket in the right pose, to within a third of an ångström.
 
-Overall the run scores `avg_plddt` 97.8, `ptm` 0.98 and `iptm` 0.94 — and `iptm` is finally
-meaningful here. It read `0.0` for ubiquitin because a single chain has no interface; here it
-scores the protein–ligand interface. For anything with more than one component, `iptm` is the
+Overall the run scores `avg_plddt` 97.8, `ptm` 0.98 and `iptm` 0.94. That last number is
+finally meaningful here. It read `0.0` for ubiquitin because a single chain has no interface;
+here it scores the protein–ligand interface. For anything with more than one component, `iptm` is the
 number to watch, not `ptm`.
 
 <details>
@@ -317,7 +317,7 @@ for name, arr in (("pred", pred_fit), ("ref", ref)):
 
 The `[:n]` truncation is safe here only because both structures are numbered contiguously from
 1 and the crystal simply stops two residues earlier, so the first 162 line up one to one. It
-would silently misalign against a reference with internal gaps or a different numbering — the
+would silently misalign against a reference with internal gaps or a different numbering. The
 complex example below shows how to match residues properly when that happens.
 
 Then render as before, with two changes: the ligands get their own stick style, and the
@@ -354,7 +354,7 @@ pixi run -e openfold3-cuda12 run_openfold predict \
 The query is phosphatidylserine decarboxylase from *E. coli*, reproducing
 [7CNX](https://www.rcsb.org/structure/7CNX) at 2.63 Å. Two sequences, four chains: a
 253-residue β subunit supplied as chains `A` and `C`, and a 42-residue α subunit as `B` and
-`D`. The two come from a single precursor that cleaves itself in half — which the crystal's
+`D`. The two come from a single precursor that cleaves itself in half, which the crystal's
 numbering still records, with β running 1–253 and α picking up at 255.
 
 <p align="center">
@@ -381,7 +381,7 @@ Prediction in navy, crystal structure in grey, same orientation as above.
 | α subunit `D` alone, 33 residues | 0.20 Å |
 
 The first row is the one that matters. Superposing all four chains together scores the folds
-*and* their arrangement at the same time, so 0.57 Å means the assembly is right — not merely
+*and* their arrangement at the same time, so 0.57 Å means the assembly is right, not merely
 four chains that are each correct but wrongly placed. The navy helix on the left with no grey
 beneath it is a stretch the crystal never resolved; the reference chain starts at residue 8.
 
@@ -391,13 +391,13 @@ is where a complex tells you more than any single number can:
 
 | | measured closest approach | `chain_pair_iptm` |
 |---|---|---|
-| `(A, B)`, `(C, D)` — α against its own β | 2.7 Å | 0.96 |
-| `(A, C)` — the β–β interface | 2.6 Å | 0.85 |
-| `(A, D)`, `(B, C)` — across the assembly | 11.4 Å | 0.78 |
-| `(B, D)` — the two α subunits | 27.1 Å | 0.54 |
+| `(A, B)` and `(C, D)`, α against its own β | 2.7 Å | 0.96 |
+| `(A, C)`, the β–β interface | 2.6 Å | 0.85 |
+| `(A, D)` and `(B, C)`, across the assembly | 11.4 Å | 0.78 |
+| `(B, D)`, the two α subunits | 27.1 Å | 0.54 |
 
 The low score is the interesting one, and it is not a warning. `(B, D)` reads 0.54 because
-those two chains sit 27 Å apart and never touch — the metric is scoring an interface that does
+those two chains sit 27 Å apart and never touch. The metric is scoring an interface that does
 not exist. A low `chain_pair_iptm` means *this pair is not confidently placed relative to each
 other*, which for a non-contacting pair is both true and harmless. Check it against the
 geometry before treating it as a failure.
@@ -405,8 +405,8 @@ geometry before treating it as a failure.
 <details>
 <summary>How these images were made</summary>
 
-The prediction and the crystal number their chains differently — the α subunit is 1–42 in the
-prediction and 255–292 in the reference — so matching on residue ID alone silently drops both
+The prediction and the crystal number their chains differently. The α subunit is 1–42 in the
+prediction and 255–292 in the reference, so matching on residue ID alone silently drops both
 α chains and leaves you scoring only the β subunits. Find the offset per chain rather than
 assuming one:
 
@@ -454,8 +454,8 @@ The α subunits are drawn thicker so a 42-residue chain stays visible next to a 
 
 ### Across multiple GPUs
 
-*To follow.* OpenFold3 distributes a multi-query job across GPUs — parallel across queries,
-not within a single structure. See the upstream
+*To follow.* OpenFold3 distributes a multi-query job across GPUs, parallel across queries
+rather than within a single structure. See the upstream
 [inference docs](https://openfold-3.readthedocs.io/en/latest/inference.html#inference-run-on-multiple-gpus)
 in the meantime.
 
@@ -463,7 +463,7 @@ in the meantime.
 
 ### On one GPU
 
-Sample a small subset and download only those structures — 8 training and 4 validation by
+Sample a small subset and download only those structures, 8 training and 4 validation by
 default, about 71 MB. The first run also pulls a 1.6 GB index to sample from, which is not
 training data and can be deleted afterwards.
 
@@ -471,7 +471,7 @@ training data and can be deleted afterwards.
 pixi run -e openfold3-cuda12 setup-pdb-subset
 ```
 
-This writes a config to `datasets/train_pdb_subset.yaml`. **Use that one** — the committed
+This writes a config to `datasets/train_pdb_subset.yaml`. **Use that one**. The committed
 `scripts/datasets/train_pdb_subset.yaml` is a template still holding another user's absolute
 paths.
 
@@ -487,7 +487,7 @@ c['experiment_settings']['output_dir'] = './quickstart_run'
 yaml.safe_dump(c, open('datasets/quickstart_single_h100.yaml', 'w'), sort_keys=False)"
 ```
 
-Then train. `WANDB_MODE=offline` is required — the YAML flag alone does not prevent a login
+Then train. `WANDB_MODE=offline` is required: the YAML flag alone does not prevent a login
 attempt:
 
 ```bash
@@ -510,7 +510,7 @@ quickstart_run/
 Two things to know about that layout. Enabling logging **moves the checkpoint**: without wandb
 it is simply `quickstart_run/checkpoints/`, so anything with a hardcoded path breaks the moment
 you turn logging on. And `logs/` looks like where you would check what happened, but never
-contains anything — the metrics are only inside the binary `.wandb` file.
+contains anything: the metrics are only inside the binary `.wandb` file.
 
 ### Monitoring the training curve
 
@@ -547,8 +547,8 @@ column -s, -t quickstart_run/metrics.csv
 
 #### Watching it live instead
 
-Offline logging only yields a curve once the run finishes. For a live dashboard — which is what
-you want for long runs, and for the multi-GPU and Slurm stages — use wandb online:
+Offline logging only yields a curve once the run finishes. For a live dashboard, which is what
+you want for long runs and for the multi-GPU and Slurm stages, use wandb online:
 
 ```bash
 pixi run -e openfold3-cuda12 wandb login     # once, needs a wandb account
@@ -565,24 +565,24 @@ pixi run -e openfold3-cuda12 wandb sync quickstart_run/wandb/offline-run-*
 
 ### Running longer
 
-The default is deliberately short — two epochs of four steps, enough to prove the pipeline.
+The default is deliberately short: two epochs of four steps, enough to prove the pipeline.
 Eight points is not a curve. To get a trace worth monitoring, raise these in the config:
 
 | Setting | Default here | For a longer run |
 |---|---|---|
-| `data_module_args.epoch_len` | `4` | `50`+ — steps per epoch |
+| `data_module_args.epoch_len` | `4` | `50`+, steps per epoch |
 | `pl_trainer_args.max_epochs` | `2` | `10`+ |
 | `--train-size` on `setup-pdb-subset` | `8` | more structures to sample from |
 
 At roughly 10 s per training step on one H100, 100 steps is about 20 minutes plus validation
 between epochs. Note that loss will not meaningfully descend on a handful of structures however
-long you run — that needs the full dataset.
+long you run. That needs the full dataset.
 
 ### Training on the full dataset
 
 The subset above exists so the pipeline can be proven quickly. Real training swaps it for the
-full PDB set and starts from one of the configs in `examples/training_yamls/` —
-`initial_training.yml` through `finetune_3.yml` — which carry real schedules rather than a
+full PDB set and starts from one of the configs in `examples/training_yamls/`
+(`initial_training.yml` through `finetune_3.yml`), which carry real schedules rather than a
 two-epoch smoke test.
 
 ```bash
@@ -618,9 +618,9 @@ Then edit the `%cd` in its first cell to point at your checkout.
 |---|---|
 | Run exits before training starts, traceback mentions `wandb_login` | `wandb_config.offline: true` does not stop `wandb.init` from attempting a login. Set `WANDB_MODE=offline` in the environment, as above. |
 | Missing-file errors for dataset caches or structures | You pointed `--runner-yaml` at `scripts/datasets/train_pdb_subset.yaml`. That is a committed template holding another user's absolute paths; use the generated `datasets/train_pdb_subset.yaml`. |
-| Training finished but `logs/` is empty and there are no metrics | `LoggingConfig` takes Weights & Biases or nothing, and defaults to `wandb_config: null` — every loss is computed and discarded. Add the `logging_config` block from step 3. |
+| Training finished but `logs/` is empty and there are no metrics | `LoggingConfig` takes Weights & Biases or nothing, and defaults to `wandb_config: null`, so every loss is computed and discarded. Add the `logging_config` block from step 3. |
 | Scripts can't find the checkpoint | Enabling logging moves it from `<output_dir>/checkpoints/` to `<output_dir>/<project>/<run id>/checkpoints/`. |
-| Inference hangs or fails at the MSA stage | `--use-msa-server true` calls the public ColabFold server — check outbound network and their rate limits. |
+| Inference hangs or fails at the MSA stage | `--use-msa-server true` calls the public ColabFold server; check outbound network and their rate limits. |
 
 ## Links
 
