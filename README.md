@@ -209,6 +209,45 @@ you whether two domains are confidently placed relative to one another.
 
 Timing per stage is written to `timing.json` in the same directory.
 
+### Co-folding a protein with a ligand
+
+Ubiquitin is a single chain — the easy case, and the one AlphaFold2 already handled. What
+AlphaFold3-style models add is **co-folding**: predicting a complex and its partners together.
+The repo ships an example that does this, and whose name is the PDB entry it reproduces:
+
+```bash
+pixi run -e openfold3-cuda12 run_openfold predict \
+    --query-json examples/example_inference_inputs/query_single_protein_single_ligand.json \
+    --use-msa-server true \
+    --output-dir ./quickstart_cofold
+```
+
+The query is T4 lysozyme L99A (164 residues) plus toluene, given as SMILES (`Cc1ccccc1`) rather
+than a sequence. The reference is [7L39](https://www.rcsb.org/structure/7L39) at 1.35 Å — the
+classic model system for ligand binding in a buried hydrophobic cavity.
+
+<p align="center">
+  <img src="assets/lysozyme_toluene.png" alt="Predicted lysozyme-toluene complex superposed on 7L39" width="560">
+</p>
+
+Prediction in navy, crystal structure in grey. Left: the whole complex. Right: the cavity, with
+the predicted toluene (blue sticks) on top of the crystallographic one (grey), surrounded by the
+side chains lining the pocket.
+
+| | |
+|---|---|
+| Protein Cα RMSD | 0.23 Å over 162 residues |
+| Toluene centroid vs. crystallographic position | 0.33 Å |
+| `avg_plddt` / `ptm` / `iptm` | 97.8 / 0.98 / 0.94 |
+
+Two things to notice. The interesting question here is not whether the backbone is right —
+lysozyme folds correctly either way — but whether the ligand found the right pocket in the right
+pose. It did, to within a third of an ångström.
+
+And `iptm` is finally meaningful. It read `0.0` for ubiquitin because a single chain has no
+interface; here it scores the protein–ligand interface at 0.94. For complexes, `iptm` is the
+number to watch, not `ptm`.
+
 ### Across multiple GPUs
 
 *To follow.* OpenFold3 distributes a multi-query job across GPUs — parallel across queries,
