@@ -539,7 +539,8 @@ with open('quickstart_run/metrics.csv', 'w', newline='') as f:
 print(f'{len(rows)} steps -> quickstart_run/metrics.csv')"
 ```
 
-The notebook does this and plots the curve inline. For a quick look from a shell:
+The notebook runs this same extraction and prints the result as a table. For a quick look from
+a shell:
 
 ```bash
 column -s, -t quickstart_run/metrics.csv
