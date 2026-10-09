@@ -97,7 +97,7 @@ for f in sorted(glob.glob('quickstart_inference/ubiquitin/seed_42/*_aggregated.j
 colour the structure by confidence:
 
 <p align="center">
-  <img src="assets/ubiquitin_cartoon.png" alt="Ubiquitin cartoon with side chains, coloured by pLDDT" width="520">
+  <img src="assets/ubiquitin_cartoon.png" alt="Ubiquitin cartoon with side chains, coloured by pLDDT" width="380">
 </p>
 
 Coloured by [AlphaFold's four confidence bands](https://www.ebi.ac.uk/training/online/courses/alphafold/inputs-and-outputs/evaluating-alphafolds-predicted-structures-using-confidence-scores/plddt-understanding-local-confidence/):
@@ -162,7 +162,7 @@ view.zoomTo(); view.show()
 than merely admired:
 
 <p align="center">
-  <img src="assets/ubiquitin_vs_1ubq.png" alt="Prediction superposed on the 1UBQ crystal structure" width="420">
+  <img src="assets/ubiquitin_vs_1ubq.png" alt="Prediction superposed on the 1UBQ crystal structure" width="320">
 </p>
 
 Prediction in navy, crystal structure in grey.
