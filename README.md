@@ -573,11 +573,23 @@ Eight points is not a curve. To get a trace worth monitoring, raise these in the
 |---|---|---|
 | `data_module_args.epoch_len` | `4` | `50`+, steps per epoch |
 | `pl_trainer_args.max_epochs` | `2` | `10`+ |
-| `--train-size` on `setup-pdb-subset` | `8` | more structures to sample from |
+| `--train-size` on `generate-pdb-subset` | `8` | more structures to sample from |
 
-At roughly 10 s per training step on one H100, 100 steps is about 20 minutes plus validation
-between epochs. Note that loss will not meaningfully descend on a handful of structures however
-long you run. That needs the full dataset.
+That last one cannot be passed to `setup-pdb-subset`, which only declares `depends-on` and so
+has nothing to forward arguments to; they are silently ignored. Call the two underlying tasks
+instead, noting the `--` that separates pixi's arguments from the script's:
+
+```bash
+pixi run -e openfold3-cuda12 generate-pdb-subset -- --train-size 32
+pixi run -e openfold3-cuda12 download-pdb-subset
+```
+
+The validation split is fixed at 4 structures. A comment in the repo's `pixi.toml` suggests a
+`--val-size` flag, but no such argument exists and passing it fails.
+
+At roughly 8 to 10 s per training step on one H100, 150 steps is about 20 minutes plus
+validation between epochs. Note that loss will not meaningfully descend on a handful of
+structures however long you run. That needs the full dataset.
 
 ### Training on the full dataset
 
@@ -622,6 +634,8 @@ Then edit the `%cd` in its first cell to point at your checkout.
 | Training finished but `logs/` is empty and there are no metrics | `LoggingConfig` takes Weights & Biases or nothing, and defaults to `wandb_config: null`, so every loss is computed and discarded. Add the `logging_config` block from step 3. |
 | Scripts can't find the checkpoint | Enabling logging moves it from `<output_dir>/checkpoints/` to `<output_dir>/<project>/<run id>/checkpoints/`. |
 | Inference hangs or fails at the MSA stage | `--use-msa-server true` calls the public ColabFold server; check outbound network and their rate limits. |
+| `setup-pdb-subset` reports `1 failed` with a 404 on a template `.npz` | Expected. One validation template, `7kud_A.npz`, is absent from the bucket, so 387 of 388 files download and the run proceeds normally. A 404 here is a missing object, not a network fault. |
+| Flags passed to `setup-pdb-subset` appear to do nothing | It is a `depends-on` aggregate with no command of its own, so arguments are dropped without warning. Pass them to `generate-pdb-subset` or `download-pdb-subset` directly, after a `--`. |
 
 ## Links
 
