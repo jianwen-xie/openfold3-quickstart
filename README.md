@@ -222,6 +222,9 @@ pixi run -e openfold3-cuda12 run_openfold predict \
     --output-dir ./quickstart_cofold
 ```
 
+The output layout, the five samples and the ranking step are all as described above — only
+what differs is shown here.
+
 The query is T4 lysozyme L99A (164 residues) plus toluene, given as SMILES (`Cc1ccccc1`) rather
 than a sequence. The reference is [7L39](https://www.rcsb.org/structure/7L39) at 1.35 Å — the
 classic model system for ligand binding in a buried hydrophobic cavity.
@@ -247,6 +250,59 @@ pose. It did, to within a third of an ångström.
 And `iptm` is finally meaningful. It read `0.0` for ubiquitin because a single chain has no
 interface; here it scores the protein–ligand interface at 0.94. For complexes, `iptm` is the
 number to watch, not `ptm`.
+
+There is no confidence-coloured render for this one because there would be nothing to see:
+96.3% of atoms score ≥ 90 and the minimum is 68.6, so the whole structure is one shade of dark
+blue. Ubiquitin spans all four bands, which is what makes that figure worth looking at.
+
+<details>
+<summary>How this image was made</summary>
+
+Superpose on the protein, then carry the same transform to the ligand so its position is
+compared in the reference's frame:
+
+```python
+import biotite.structure as struc, biotite.structure.io.pdbx as pdbx
+
+pred = pdbx.get_structure(pdbx.CIFFile.read(
+    "quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif"), model=1)
+ref = pdbx.get_structure(pdbx.CIFFile.read("7l39.cif"), model=1)
+
+pred_ca = pred[struc.filter_amino_acids(pred) & (pred.atom_name == "CA")]
+ref_ca = ref[struc.filter_amino_acids(ref) & ~ref.hetero & (ref.atom_name == "CA")]
+n = min(pred_ca.array_length(), ref_ca.array_length())
+fitted, transform = struc.superimpose(ref_ca[:n], pred_ca[:n])
+print(f"protein RMSD {struc.rmsd(ref_ca[:n], fitted):.2f} A")
+
+pred_fit = transform.apply(pred)                      # ligand moves with the protein
+lig_pred = pred_fit[pred_fit.res_name == "LIG0"]      # predicted ligand is named LIG0
+lig_ref = ref[(ref.res_name == "MBN") & (ref.element != "H")]   # MBN = toluene
+import numpy as np
+print(f"ligand centroid {np.linalg.norm(lig_pred.coord.mean(0) - lig_ref.coord.mean(0)):.2f} A")
+
+# write both as mmCIF -- PDB format rejects the 4-character residue name LIG0
+for name, arr in (("pred", pred_fit), ("ref", ref)):
+    f = pdbx.CIFFile(); pdbx.set_structure(f, arr); f.write(f"{name}.cif")
+```
+
+Then render as before, with two changes: the ligands get their own stick style, and the
+close-up drops the cartoon to 35% opacity because the toluene is buried and an opaque ribbon
+hides it.
+
+```js
+v.addModel(ref, "cif");
+v.setStyle({model:0}, {cartoon:{color:"#dedede", thickness:0.28, opacity:0.35}});
+v.setStyle({model:0, resn:"MBN"}, {stick:{radius:0.28, color:"#777777"}});
+v.addModel(pred, "cif");
+v.setStyle({model:1}, {cartoon:{color:"#27408B", thickness:0.28, opacity:0.35}});
+v.setStyle({model:1, resn:"LIG0"}, {stick:{radius:0.28, color:"#1f6feb"}});
+// cavity-lining side chains for context, then frame on the ligand
+v.addStyle({model:0, within:{distance:6.0, sel:{resn:"MBN"}}, hetflag:false},
+           {stick:{radius:0.10, color:"#999999"}});
+v.zoomTo({model:0, resn:"MBN"}); v.zoom(0.62); v.render();
+```
+
+</details>
 
 ### Across multiple GPUs
 
