@@ -260,17 +260,17 @@ the table below. The faint grey sticks are the side chains lining the pocket, an
 is drawn at 30% opacity because the cavity is buried and an opaque ribbon would hide the
 ligand entirely.
 
-| | |
+| Superposition | Deviation |
 |---|---|
-| Protein Cα RMSD | 0.23 Å over 162 residues |
+| Protein Cα, 162 residues | 0.23 Å |
 | Toluene centroid vs. crystallographic position | 0.33 Å |
-| `avg_plddt` / `ptm` / `iptm` | 97.8 / 0.98 / 0.94 |
 
 The ligand found the right pocket in the right pose, to within a third of an ångström.
 
-Note also that `iptm` is finally meaningful. It read `0.0` for ubiquitin because a single chain
-has no interface; here it scores the protein–ligand interface at 0.94. For anything with more
-than one component, `iptm` is the number to watch, not `ptm`.
+Overall the run scores `avg_plddt` 97.8, `ptm` 0.98 and `iptm` 0.94 — and `iptm` is finally
+meaningful here. It read `0.0` for ubiquitin because a single chain has no interface; here it
+scores the protein–ligand interface. For anything with more than one component, `iptm` is the
+number to watch, not `ptm`.
 
 <details>
 <summary>How this image was made</summary>
@@ -356,11 +356,11 @@ Prediction in navy, crystal structure in grey, same orientation as above.
 
 | Superposition | Cα RMSD |
 |---|---|
-| All four chains at once | 0.57 Å over 557 residues |
-| β subunit `A` alone | 0.29 Å over 246 residues |
-| β subunit `C` alone | 0.35 Å over 240 residues |
-| α subunit `B` alone | 1.11 Å over 38 residues |
-| α subunit `D` alone | 0.20 Å over 33 residues |
+| All four chains at once, 557 residues | 0.57 Å |
+| β subunit `A` alone, 246 residues | 0.29 Å |
+| β subunit `C` alone, 240 residues | 0.35 Å |
+| α subunit `B` alone, 38 residues | 1.11 Å |
+| α subunit `D` alone, 33 residues | 0.20 Å |
 
 The first row is the one that matters. Superposing all four chains together scores the folds
 *and* their arrangement at the same time, so 0.57 Å means the assembly is right — not merely
