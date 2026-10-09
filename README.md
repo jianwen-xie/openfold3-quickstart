@@ -98,10 +98,13 @@ for f in sorted(glob.glob('quickstart_inference/ubiquitin/seed_42/*_aggregated.j
 ```
 
 Everything above is the same for any query. What differs between inputs is which of these
-numbers is worth looking at, so the rest of this section walks three kinds of input: a single
-protein, a protein with a ligand, and a multi-chain complex.
+numbers is worth looking at, so the rest of this section works three examples:
 
-#### A single protein
+1. **A single protein** — ubiquitin. Read pLDDT.
+2. **A protein with a ligand** — T4 lysozyme and toluene. Read the ligand pose.
+3. **Co-folding a complex** — a four-chain assembly. Read `iptm` and `chain_pair_iptm`.
+
+#### (1) A single protein
 
 Ubiquitin, as launched above. For a single chain, pLDDT is the figure that matters — there are
 no interfaces, so `iptm` reads `0.0` and carries no information.
@@ -141,9 +144,14 @@ const v = $3Dmol.createViewer("v", {backgroundColor: "white"});
 v.addModel(cifText, "cif");
 v.setStyle({}, {cartoon: {colorfunc: band, thickness: 0.35}});
 v.addStyle({not: {atom: ["N", "C", "O"]}}, {stick: {radius: 0.12, colorfunc: band}});
-v.zoomTo(); v.rotate(110, "y"); v.zoom(1.3); v.render();
+v.zoomTo(); v.rotate(60, "y"); v.zoom(1.3); v.render();
 </script>
 ```
+
+`cifText` here is the prediction after it has been superposed onto the reference — the
+`pred_fitted` produced in the next section — so that this figure and the superposition below
+look at the molecule from the same angle. Rendering the raw file instead gives the same
+colours in a different orientation, which makes the two figures hard to compare.
 
 py3Dmol is a JavaScript widget, so it renders in a running notebook but not on GitHub. The
 static image above came from putting the above in an HTML page and screenshotting it:
@@ -203,9 +211,14 @@ ref = ref[struc.filter_amino_acids(ref) & ~ref.hetero]      # drop waters and li
 
 pred_ca, ref_ca = pred[pred.atom_name == "CA"], ref[ref.atom_name == "CA"]
 fitted, transform = struc.superimpose(ref_ca, pred_ca)
-print(f"RMSD {struc.rmsd(ref_ca, fitted):.2f} A")
+print(f"RMSD {struc.rmsd(ref_ca, fitted):.2f} A")          # -> 0.73
 
 pred_fitted = transform.apply(pred)                          # for rendering the overlay
+
+# second row of the table: the folded core, excluding the flexible tail
+core = pred_ca.res_id <= 72
+core_fitted, _ = struc.superimpose(ref_ca[core], pred_ca[core])
+print(f"RMSD 1-72 {struc.rmsd(ref_ca[core], core_fitted):.2f} A")   # -> 0.44
 ```
 
 Get the reference with `curl -O https://files.rcsb.org/download/1UBQ.cif`. This works because
@@ -222,7 +235,7 @@ you whether two domains are confidently placed relative to one another.
 
 Timing per stage is written to `timing.json` in the same directory.
 
-#### A protein with a ligand
+#### (2) A protein with a ligand
 
 Ubiquitin is a single chain — the easy case, and the one AlphaFold2 already handled. What
 AlphaFold3-style models add is **co-folding**: predicting a structure and its partners
@@ -302,6 +315,11 @@ for name, arr in (("pred", pred_fit), ("ref", ref)):
     f = pdbx.CIFFile(); pdbx.set_structure(f, arr); f.write(f"{name}.cif")
 ```
 
+The `[:n]` truncation is safe here only because both structures are numbered contiguously from
+1 and the crystal simply stops two residues earlier, so the first 162 line up one to one. It
+would silently misalign against a reference with internal gaps or a different numbering — the
+complex example below shows how to match residues properly when that happens.
+
 Then render as before, with two changes: the ligands get their own stick style, and the
 close-up drops the cartoon to 35% opacity because the toluene is buried and an opaque ribbon
 hides it.
@@ -321,7 +339,7 @@ v.zoomTo({model:0, resn:"MBN"}); v.zoom(0.62); v.render();
 
 </details>
 
-#### Co-folding a complex
+#### (3) Co-folding a complex
 
 The ligand case has a single protein chain. The harder version is several chains that have to
 fold *and* find their arrangement with one another. The repo ships one:
