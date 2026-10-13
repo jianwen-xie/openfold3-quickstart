@@ -461,28 +461,31 @@ in the meantime.
 
 ## Training
 
-### On one GPU
+### Prepare the training data
 
-Choose a handful of structures, then download only those. Two steps, and the same
-`--train-size` has to go to both:
+Generate a subset of the PDB training data:
 
 ```bash
-pixi run -e openfold3-cuda12 generate-pdb-subset --train-size 8
-pixi run -e openfold3-cuda12 download-pdb-subset --train-size 8
+pixi run -e openfold3-cuda12 generate-pdb-subset --train-size 8 --seed 42
 ```
 
-`8` is the default, written out here because it is the knob you raise for a longer run. The
-first command samples the catalogue and writes the pruned caches; the second fetches the
-structures those caches name, about 73 MB.
+Download the corresponding data:
 
-The first command also writes the training config, `datasets/train_pdb_subset.yaml`, with your
-paths filled in. That is the one to pass to `--runner-yaml` below.
+```bash
+pixi run -e openfold3-cuda12 download-pdb-subset --train-size 8 --workers 24
+```
 
-That catalogue is a 1.6 GB listing of the whole PDB training set, and is the largest thing
-either command downloads. Nothing reads it again once the pruned caches exist, so it can be
-deleted afterwards.
+The dataset configuration for training is written to `datasets/train_pdb_subset.yaml`. The
+default `max_epochs` is 2.
 
-Add offline logging, or the run will discard every loss it computes:
+`--train-size` has to match in both commands, since each resolves its cache from that number.
+`--workers` sets parallel download threads and defaults to 8. The 1.6 GB catalogue the first
+command fetches is a listing of the whole PDB training set, not training data, and can be
+deleted once the subset caches exist.
+
+### Scheme 1: single GPU, H100
+
+Add offline logging to the generated config first, or the run discards every loss it computes:
 
 ```bash
 pixi run -e openfold3-cuda12 python -c "
@@ -494,15 +497,17 @@ c['experiment_settings']['output_dir'] = './quickstart_run'
 yaml.safe_dump(c, open('datasets/quickstart_single_h100.yaml', 'w'), sort_keys=False)"
 ```
 
-Then train. `WANDB_MODE=offline` is required: the YAML flag alone does not prevent a login
-attempt:
+Train:
 
 ```bash
 WANDB_MODE=offline pixi run -e openfold3-cuda12 run_openfold train \
     --runner-yaml datasets/quickstart_single_h100.yaml --seed 42
 ```
 
-Two epochs of four steps, a few minutes. Output goes to the `output_dir` set in the config:
+Two epochs of four steps, a few minutes. `WANDB_MODE=offline` is required: the `offline: true`
+flag in the YAML does not by itself prevent a login attempt.
+
+Output goes to the `output_dir` set in the config:
 
 ```
 quickstart_run/
@@ -517,6 +522,15 @@ quickstart_run/
 Two traps in that layout. Enabling logging **moves the checkpoint** out of
 `quickstart_run/checkpoints/`, so hardcoded paths break. And `logs/` is always empty; the
 metrics live only in the binary `.wandb` file.
+
+### Scheme 2: multiple GPUs, one node
+
+*To follow.* Set `pl_trainer_args.devices: 8`; the launch command is unchanged.
+
+### Scheme 3: multiple nodes, Slurm
+
+*To follow.* Set `pl_trainer_args.num_nodes: N` and submit with `sbatch`. Submission scripts
+will live in `slurm/`.
 
 ### Monitoring the training curve
 
@@ -670,15 +684,6 @@ two-epoch smoke test.
 ```bash
 aws s3 sync s3://openfold3-data/pdb_training_set/ /shared/openfold3/pdb_training_set/ --no-sign-request
 ```
-
-### Across multiple GPUs, one node
-
-*To follow.* Set `pl_trainer_args.devices: 8`; the launch command is unchanged.
-
-### Across multiple nodes (Slurm)
-
-*To follow.* Set `pl_trainer_args.num_nodes: N` and submit with `sbatch`. Submission scripts
-will live in `slurm/`.
 
 ## Running the notebook instead
 
