@@ -478,34 +478,9 @@ structures those caches name, about 73 MB.
 The first command also writes the training config, `datasets/train_pdb_subset.yaml`, with your
 paths filled in. That is the one to pass to `--runner-yaml` below.
 
-<details>
-<summary>What gets downloaded, including 1.6 GB you can delete afterwards</summary>
-
-| Written to `datasets/` | Size | What it is |
-|---|---|---|
-| `training_cache_with_templates.json` | 1.6 GB | A catalogue of the whole PDB training set: which entries exist, their chains, their templates. No coordinates. |
-| `validation_cache_with_templates.json` | 35 MB | The same, for validation |
-| `pdb_training_set/` | 73 MB | The real data for the 12 chosen entries, 435 files |
-| `*_subset_8.json`, `*_subset_4.json` | 35 MB | The catalogue pruned to those 12. Training reads these |
-
-The catalogue exists only so the first command can pick 12 entries out of the full set. Once
-the pruned caches are written it is never read again: the generated config points at
-`..._subset_8.json` and `..._subset_4.json` and never at the full file, so deleting it is safe.
-
-Both scripts resolve their cache from the size, as
-`training_cache_with_templates_subset_{train_size}.json`, and both default to `8`. Give a new
-size to `generate-pdb-subset` alone and the download quietly falls back to 8, fetches that
-subset instead and reports success, leaving the config pointing at structures that were never
-downloaded. Training then fails on missing files much later.
-
-The repo also ships `setup-pdb-subset`, which chains these two with their defaults. It is
-shorter, but it declares only `depends-on` and has no command of its own, so it cannot take
-`--train-size` at all and drops the flag without warning.
-
-The validation split is fixed at 4. `download_subset.py` takes a `--val-size`, but
-`generate_subset_cache.py` has no such argument, so no other size can be generated.
-
-</details>
+That catalogue is a 1.6 GB listing of the whole PDB training set, and is the largest thing
+either command downloads. Nothing reads it again once the pruned caches exist, so it can be
+deleted afterwards.
 
 Add offline logging, or the run will discard every loss it computes:
 
