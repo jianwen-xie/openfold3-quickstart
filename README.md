@@ -469,25 +469,25 @@ Pick a handful of structures and download only those:
 pixi run -e openfold3-cuda12 setup-pdb-subset
 ```
 
-Several files arrive, and it is worth knowing which is which, because the largest of them is
-not training data:
+This writes a config to `datasets/train_pdb_subset.yaml`. **Use that one**. The committed
+`scripts/datasets/train_pdb_subset.yaml` is a template still holding another user's absolute
+paths.
+
+<details>
+<summary>What it downloads, including 1.6 GB you can delete afterwards</summary>
 
 | Written to `datasets/` | Size | What it is |
 |---|---|---|
 | `training_cache_with_templates.json` | 1.6 GB | A catalogue of the whole PDB training set: which entries exist, their chains, their templates. No coordinates. |
 | `validation_cache_with_templates.json` | 35 MB | The same, for validation |
-| `pdb_training_set/` | 73 MB | The actual data for the chosen entries: coordinates, alignments, templates and reference molecules, 435 files |
-| `*_subset_8.json`, `*_subset_4.json` | 35 MB | The catalogue pruned to the chosen entries. Training reads these |
+| `pdb_training_set/` | 73 MB | The real data for the 12 chosen entries, 435 files |
+| `*_subset_8.json`, `*_subset_4.json` | 35 MB | The catalogue pruned to those 12. Training reads these |
 
-So the step downloads a 1.6 GB catalogue of everything in order to choose 8 training and 4
-validation entries from it, then fetches 73 MB of real data for those twelve. Once the pruned
-caches are written the catalogue is no longer consulted: the generated config points at
-`..._subset_8.json` and `..._subset_4.json` and never at the full file, so it can be deleted
-to reclaim the space.
+The catalogue exists only so the script can pick 12 entries out of the full set. Once the
+pruned caches are written it is never read again: the generated config points at
+`..._subset_8.json` and `..._subset_4.json` and never at the full file, so deleting it is safe.
 
-This writes a config to `datasets/train_pdb_subset.yaml`. **Use that one**. The committed
-`scripts/datasets/train_pdb_subset.yaml` is a template still holding another user's absolute
-paths.
+</details>
 
 Add offline logging, or the run will discard every loss it computes:
 
@@ -521,14 +521,13 @@ quickstart_run/
 └── logs/                           always empty
 ```
 
-Two things to know about that layout. Enabling logging **moves the checkpoint**: without wandb
-it is simply `quickstart_run/checkpoints/`, so anything with a hardcoded path breaks the moment
-you turn logging on. And `logs/` looks like where you would check what happened, but never
-contains anything: the metrics are only inside the binary `.wandb` file.
+Two traps in that layout. Enabling logging **moves the checkpoint** out of
+`quickstart_run/checkpoints/`, so hardcoded paths break. And `logs/` is always empty; the
+metrics live only in the binary `.wandb` file.
 
 ### Monitoring the training curve
 
-The run writes its metrics to a local wandb file. Convert them to a CSV and plot:
+The run writes its metrics to a local wandb file, not to `logs/`. Convert them to a CSV:
 
 ```bash
 pixi run -e openfold3-cuda12 python -c "
@@ -553,18 +552,15 @@ with open('quickstart_run/metrics.csv', 'w', newline='') as f:
 print(f'{len(rows)} steps -> quickstart_run/metrics.csv')"
 ```
 
-The notebook runs this same extraction and prints the result as a table. For a quick look from
+The notebook runs the same extraction and prints the result as a table. For a quick look from
 a shell:
 
 ```bash
 column -s, -t quickstart_run/metrics.csv
 ```
 
-#### What the curve looks like
-
-Eight steps is too few to plot, so the figure below comes from a longer run of the same
-pipeline: `epoch_len: 25` and `max_epochs: 6`, which is 150 steps and about 25 minutes on one
-H100. Everything else is unchanged.
+Eight steps is too few to plot, so the figure below is the same pipeline run longer:
+`epoch_len: 25` and `max_epochs: 6`, which is 150 steps and about 25 minutes on one H100.
 
 <p align="center">
   <img src="assets/training_curve.png" alt="Training loss falling while validation lDDT stays flat" width="820">
@@ -573,40 +569,31 @@ H100. Everything else is unchanged.
 | | start | end |
 |---|---:|---:|
 | `train/loss` | 6.74 | 4.96 |
-| `train/distogram_loss` | 4.16 | 2.45 |
 | `val/lddt_intra_protein` | 0.052 | 0.061 |
 | `val/rmsd` | 20.96 Å | 20.30 Å |
 
-**The training loss falls and it means nothing.** That is the useful lesson here. Loss drops by
-a quarter over 150 steps, which looks like progress, while accuracy on the four held-out
-structures does not move: lDDT stays near 0.05 on a scale where 1.0 is a perfect match, and
-RMSD sits above 20 Å throughout. The model is fitting eight structures, not learning to fold.
-
-Two reasons it cannot do better, both worth knowing before reading any number from this run:
-
-- **Training starts from random weights.** `restart_checkpoint_path: last` finds no checkpoint
-  on a first run and Lightning logs `no last checkpoint available. No checkpoint will be
-  loaded`. It does not fall back to the released parameters that inference uses, so this is a
-  fresh model, which is why its predictions are ~20 Å from the answer. The quickstart trains a
-  new model badly; it does not fine-tune a good one.
-- **Eight structures is not a dataset.** Nothing about generalisation can be learned from them
-  however long you run.
-
-So read this curve as a pipeline check: data loading, forward pass, loss, backward pass,
-optimiser and checkpoint writer all work together, and the losses are logged where you can
-find them. For a curve that means something, see
-[Training on the full dataset](#training-on-the-full-dataset).
-
-The spikes to 12 to 19 in the left panel are single steps, not instability. Batch size is one
-structure, and a large or awkward crop costs much more loss than a small one.
+**The loss falls and it means nothing.** It drops by a quarter while accuracy on the four
+held-out structures does not move: lDDT stays near 0.05 where 1.0 is perfect, and RMSD sits
+above 20 Å. The model is fitting eight structures, not learning to fold. Read this curve as a
+pipeline check, not as progress.
 
 <details>
-<summary>How this figure was made</summary>
+<summary>Why it cannot do better, and how the figure was made</summary>
 
-The extraction is the one above, kept as a list of records rather than written to CSV, so the
-validation entries survive. Validation metrics appear on their own records, once per epoch, and
-carry no `train/loss` key, so the `if 'train/loss' in row` filter used for the CSV would drop
-every one of them.
+**Training starts from random weights.** `restart_checkpoint_path: last` finds no checkpoint on
+a first run, and Lightning logs `no last checkpoint available. No checkpoint will be loaded`.
+It does not fall back to the released parameters that inference uses, so this is a fresh model,
+which is why its predictions sit ~20 Å from the answer. The quickstart trains a new model
+badly; it does not fine-tune a good one. That, and eight structures being far too few to
+generalise from, is the whole story. For a curve that means something, see
+[Training on the full dataset](#training-on-the-full-dataset).
+
+The spikes to 12 to 19 are single steps rather than instability: batch size is one structure,
+and a large or awkward crop costs much more loss than a small one.
+
+To plot, keep the extraction above as a list of records instead of writing the CSV. Its
+`if 'train/loss' in row` filter drops every validation record: this run logs 18 of them, and
+not one carries that key.
 
 ```python
 import numpy as np, matplotlib
@@ -633,10 +620,10 @@ ax2.set_ylim(0, 1)                              # full lDDT range, not zoomed
 ax2.set_xlim(ax1.get_xlim())                    # same step axis on both panels
 ```
 
-Two panels rather than one with a second y-axis: a loss of ~5 and an lDDT of ~0.05 share no
-scale, and overlaying them on twin axes lets the crossing point be moved anywhere by choosing
-the limits. The lDDT panel is drawn over its full 0 to 1 range for the same reason. Zoomed to
-0.05 to 0.06 the same six points look like a healthy climb.
+Two panels rather than twin y-axes: a loss of ~5 and an lDDT of ~0.05 share no scale, and
+overlaying them lets the crossing point be moved anywhere by choosing the limits. The lDDT
+panel is drawn over its full 0 to 1 range for the same reason; zoomed to 0.05 to 0.06 those
+six points look like a healthy climb.
 
 </details>
 
@@ -669,21 +656,28 @@ Eight points is not a curve. To get a trace worth monitoring, raise these in the
 | `pl_trainer_args.max_epochs` | `2` | `10`+ |
 | `--train-size` on `generate-pdb-subset` | `8` | more structures to sample from |
 
-That last one cannot be passed to `setup-pdb-subset`, which only declares `depends-on` and so
-has nothing to forward arguments to; they are silently ignored. Call the two underlying tasks
-instead, noting the `--` that separates pixi's arguments from the script's:
+For more structures, call the two underlying tasks rather than `setup-pdb-subset`:
 
 ```bash
 pixi run -e openfold3-cuda12 generate-pdb-subset -- --train-size 32
 pixi run -e openfold3-cuda12 download-pdb-subset
 ```
 
-The validation split is fixed at 4 structures. A comment in the repo's `pixi.toml` suggests a
-`--val-size` flag, but no such argument exists and passing it fails.
+At roughly 8 to 10 s per step on one H100, 150 steps is about 20 minutes plus validation
+between epochs.
 
-At roughly 8 to 10 s per training step on one H100, 150 steps is about 20 minutes plus
-validation between epochs. Note that loss will not meaningfully descend on a handful of
-structures however long you run. That needs the full dataset.
+<details>
+<summary>Why not just pass <code>--train-size</code> to <code>setup-pdb-subset</code></summary>
+
+It declares only `depends-on` and has no command of its own, so it has nothing to forward
+arguments to and drops them without warning. The `--` above separates pixi's arguments from
+the script's.
+
+The validation split is fixed at 4. A comment in the repo's `pixi.toml` advertises a
+`--val-size` flag, but no such argument exists in `generate_subset_cache.py` and passing it
+fails.
+
+</details>
 
 ### Training on the full dataset
 
