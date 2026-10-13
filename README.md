@@ -466,22 +466,23 @@ in the meantime.
 Generate a subset of the PDB training data:
 
 ```bash
+# --train-size  how many training structures to sample
+# --seed        fixes which ones, so the subset is reproducible
 pixi run -e openfold3-cuda12 generate-pdb-subset --train-size 8 --seed 42
 ```
 
 Download the corresponding data:
 
 ```bash
+# --train-size  must match the line above; each command finds its cache by this number
+# --workers     parallel download threads (default 8)
 pixi run -e openfold3-cuda12 download-pdb-subset --train-size 8 --workers 24
 ```
 
-The dataset configuration for training is written to `datasets/train_pdb_subset.yaml`. The
-default `max_epochs` is 2.
-
-`--train-size` has to match in both commands, since each resolves its cache from that number.
-`--workers` sets parallel download threads and defaults to 8. The 1.6 GB catalogue the first
-command fetches is a listing of the whole PDB training set, not training data, and can be
-deleted once the subset caches exist.
+The dataset configuration for training is written to `datasets/train_pdb_subset.yaml`, and the
+default `max_epochs` is 2. The 1.6 GB catalogue the first command fetches is a listing of the
+whole PDB training set rather than training data, and can be deleted once the subset caches
+exist.
 
 ### Scheme 1: single GPU, H100
 
@@ -490,22 +491,31 @@ Add offline logging to the generated config first, or the run discards every los
 ```bash
 pixi run -e openfold3-cuda12 python -c "
 import yaml
+
+# read the config generate-pdb-subset wrote
 c = yaml.safe_load(open('datasets/train_pdb_subset.yaml'))
+
+# it ships with wandb_config: null, which is why losses are computed and thrown away
 c['logging_config'] = {'log_lr': True, 'wandb_config': {
     'project': 'openfold3-quickstart', 'experiment_name': 'single-h100', 'offline': True}}
+
+# checkpoints and metrics land here
 c['experiment_settings']['output_dir'] = './quickstart_run'
+
+# write a NEW file; train_pdb_subset.yaml is left exactly as generated
 yaml.safe_dump(c, open('datasets/quickstart_single_h100.yaml', 'w'), sort_keys=False)"
 ```
 
 Train:
 
 ```bash
+# WANDB_MODE=offline is required; the offline flag inside the YAML does not stop a login attempt
+# --runner-yaml points at the file written just above, not at train_pdb_subset.yaml
 WANDB_MODE=offline pixi run -e openfold3-cuda12 run_openfold train \
     --runner-yaml datasets/quickstart_single_h100.yaml --seed 42
 ```
 
-Two epochs of four steps, a few minutes. `WANDB_MODE=offline` is required: the `offline: true`
-flag in the YAML does not by itself prevent a login attempt.
+Two epochs of four steps, a few minutes.
 
 Output goes to the `output_dir` set in the config:
 
