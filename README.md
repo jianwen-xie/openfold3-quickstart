@@ -463,13 +463,27 @@ in the meantime.
 
 ### On one GPU
 
-Sample a small subset and download only those structures, 8 training and 4 validation by
-default, about 71 MB. The first run also pulls a 1.6 GB index to sample from, which is not
-training data and can be deleted afterwards.
+Pick a handful of structures and download only those:
 
 ```bash
 pixi run -e openfold3-cuda12 setup-pdb-subset
 ```
+
+Several files arrive, and it is worth knowing which is which, because the largest of them is
+not training data:
+
+| Written to `datasets/` | Size | What it is |
+|---|---|---|
+| `training_cache_with_templates.json` | 1.6 GB | A catalogue of the whole PDB training set: which entries exist, their chains, their templates. No coordinates. |
+| `validation_cache_with_templates.json` | 35 MB | The same, for validation |
+| `pdb_training_set/` | 73 MB | The actual data for the chosen entries: coordinates, alignments, templates and reference molecules, 435 files |
+| `*_subset_8.json`, `*_subset_4.json` | 35 MB | The catalogue pruned to the chosen entries. Training reads these |
+
+So the step downloads a 1.6 GB catalogue of everything in order to choose 8 training and 4
+validation entries from it, then fetches 73 MB of real data for those twelve. Once the pruned
+caches are written the catalogue is no longer consulted: the generated config points at
+`..._subset_8.json` and `..._subset_4.json` and never at the full file, so it can be deleted
+to reclaim the space.
 
 This writes a config to `datasets/train_pdb_subset.yaml`. **Use that one**. The committed
 `scripts/datasets/train_pdb_subset.yaml` is a template still holding another user's absolute
