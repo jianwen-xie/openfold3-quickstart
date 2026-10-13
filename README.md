@@ -656,26 +656,34 @@ Eight points is not a curve. To get a trace worth monitoring, raise these in the
 | `pl_trainer_args.max_epochs` | `2` | `10`+ |
 | `--train-size` on `generate-pdb-subset` | `8` | more structures to sample from |
 
-For more structures, call the two underlying tasks rather than `setup-pdb-subset`:
+For more structures, call the two underlying tasks rather than `setup-pdb-subset`, passing the
+same `--train-size` to **both**:
 
 ```bash
-pixi run -e openfold3-cuda12 generate-pdb-subset -- --train-size 32
-pixi run -e openfold3-cuda12 download-pdb-subset
+pixi run -e openfold3-cuda12 generate-pdb-subset --train-size 32
+pixi run -e openfold3-cuda12 download-pdb-subset --train-size 32
 ```
 
 At roughly 8 to 10 s per step on one H100, 150 steps is about 20 minutes plus validation
 between epochs.
 
 <details>
-<summary>Why not just pass <code>--train-size</code> to <code>setup-pdb-subset</code></summary>
+<summary>Why the size goes on both commands, and not on <code>setup-pdb-subset</code></summary>
 
-It declares only `depends-on` and has no command of its own, so it has nothing to forward
-arguments to and drops them without warning. The `--` above separates pixi's arguments from
-the script's.
+Each script resolves the cache from the size by filename,
+`training_cache_with_templates_subset_{train_size}.json`, and both default to `8`. Give the
+size only to `generate-pdb-subset` and the download silently falls back to 8, finds the
+existing subset-8 cache and fetches those files instead, with no error at setup. Training then
+fails later on missing structures, because the generated config points at the subset-32 cache
+that was never downloaded.
 
-The validation split is fixed at 4. A comment in the repo's `pixi.toml` advertises a
-`--val-size` flag, but no such argument exists in `generate_subset_cache.py` and passing it
-fails.
+`setup-pdb-subset` cannot take the flag at all. It declares only `depends-on` and has no
+command of its own, so it has nothing to forward arguments to and drops them without warning.
+
+The validation split is fixed at 4: `download_subset.py` takes a `--val-size`, but
+`generate_subset_cache.py` has no such argument, so there is no way to generate a different
+one. A comment in the repo's `pixi.toml` advertises `--val-size` on the generate side; passing
+it there fails.
 
 </details>
 
@@ -723,7 +731,8 @@ Then edit the `%cd` in its first cell to point at your checkout.
 | Scripts can't find the checkpoint | Enabling logging moves it from `<output_dir>/checkpoints/` to `<output_dir>/<project>/<run id>/checkpoints/`. |
 | Inference hangs or fails at the MSA stage | `--use-msa-server true` calls the public ColabFold server; check outbound network and their rate limits. |
 | `setup-pdb-subset` reports `1 failed` with a 404 on a template `.npz` | Expected. One validation template, `7kud_A.npz`, is absent from the bucket, so 387 of 388 files download and the run proceeds normally. A 404 here is a missing object, not a network fault. |
-| Flags passed to `setup-pdb-subset` appear to do nothing | It is a `depends-on` aggregate with no command of its own, so arguments are dropped without warning. Pass them to `generate-pdb-subset` or `download-pdb-subset` directly, after a `--`. |
+| Flags passed to `setup-pdb-subset` appear to do nothing | It is a `depends-on` aggregate with no command of its own, so arguments are dropped without warning. Pass them to `generate-pdb-subset` and `download-pdb-subset` directly instead. |
+| Training fails on missing structures after changing `--train-size` | The size has to go to `download-pdb-subset` as well. On its own it defaults to 8, downloads the subset-8 files without error, and leaves the config pointing at a cache whose structures were never fetched. |
 
 ## Links
 
