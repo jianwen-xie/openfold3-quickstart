@@ -475,9 +475,18 @@ pixi run -e openfold3-cuda12 download-pdb-subset --train-size 8
 first command samples the catalogue and writes the pruned caches; the second fetches the
 structures those caches name, about 73 MB.
 
-This writes a config to `datasets/train_pdb_subset.yaml`. **Use that one**. The committed
-`scripts/datasets/train_pdb_subset.yaml` is a template still holding another user's absolute
-paths.
+This writes a config to `datasets/train_pdb_subset.yaml`, with your paths in it. **Use that
+one.** The repo also commits a `scripts/datasets/train_pdb_subset.yaml`, same filename, one
+directory over, and that is the one you will find by browsing or searching, because the real
+one does not exist until the command above has run. It still holds the absolute paths of
+whoever generated it:
+
+```yaml
+dataset_cache_file: /home/jnwei/workspace/openfold-3/scripts/datasets/training_cache_...json
+```
+
+Point `--runner-yaml` at that and training dies on missing files no matter how correctly the
+data downloaded. A foreign username in the paths is the tell.
 
 <details>
 <summary>What gets downloaded, including 1.6 GB you can delete afterwards</summary>
