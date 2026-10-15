@@ -476,6 +476,7 @@ Download the corresponding data:
 ```bash
 # --train-size  must match the line above; each command finds its cache by this number
 # --workers     parallel download threads (default 8)
+# ends on "1 failed": one validation template is absent from the bucket, which is harmless
 pixi run -e openfold3-cuda12 download-pdb-subset --train-size 8 --workers 24
 ```
 
@@ -719,18 +720,6 @@ pixi run -e openfold3-cuda12 python -m ipykernel install --user \
 ```
 
 Then edit the `%cd` in its first cell to point at your checkout.
-
-## If something goes wrong
-
-| Symptom | Cause |
-|---|---|
-| Run exits before training starts, traceback mentions `wandb_login` | `wandb_config.offline: true` does not stop `wandb.init` from attempting a login. Set `WANDB_MODE=offline` in the environment, as above. |
-| Training finished but `logs/` is empty and there are no metrics | `LoggingConfig` takes Weights & Biases or nothing, and defaults to `wandb_config: null`, so every loss is computed and discarded. Add the `logging_config` block from step 3. |
-| Scripts can't find the checkpoint | Enabling logging moves it from `<output_dir>/checkpoints/` to `<output_dir>/<project>/<run id>/checkpoints/`. |
-| Inference hangs or fails at the MSA stage | `--use-msa-server true` calls the public ColabFold server; check outbound network and their rate limits. |
-| `download-pdb-subset` reports `1 failed` with a 404 on a template `.npz` | Expected. One validation template, `7kud_A.npz`, is absent from the bucket, so 387 of 388 files arrive and the run proceeds normally. A 404 here is a missing object, not a network fault. |
-| Flags passed to `setup-pdb-subset` appear to do nothing | That task is a `depends-on` aggregate with no command of its own, so arguments are dropped without warning. Use `generate-pdb-subset` and `download-pdb-subset` directly, as above. |
-| Training fails on missing structures after changing `--train-size` | The size has to go to `download-pdb-subset` as well. On its own it defaults to 8, downloads the subset-8 files without error, and leaves the config pointing at a cache whose structures were never fetched. |
 
 ## Links
 
