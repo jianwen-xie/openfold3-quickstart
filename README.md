@@ -486,7 +486,13 @@ exist.
 
 ### Scheme 1: single GPU, H100
 
-Add offline logging to the generated config first, or the run discards every loss it computes:
+Log in to Weights & Biases once, so the run can stream its losses to a dashboard:
+
+```bash
+pixi run -e openfold3-cuda12 wandb login
+```
+
+Add a logging block to the generated config, or the run discards every loss it computes:
 
 ```bash
 pixi run -e openfold3-cuda12 python -c "
@@ -497,7 +503,7 @@ c = yaml.safe_load(open('datasets/train_pdb_subset.yaml'))
 
 # it ships with wandb_config: null, which is why losses are computed and thrown away
 c['logging_config'] = {'log_lr': True, 'wandb_config': {
-    'project': 'openfold3-quickstart', 'experiment_name': 'single-h100', 'offline': True}}
+    'project': 'openfold3-quickstart', 'experiment_name': 'single-h100'}}
 
 # checkpoints and metrics land here
 c['experiment_settings']['output_dir'] = './quickstart_run'
@@ -509,13 +515,13 @@ yaml.safe_dump(c, open('datasets/quickstart_single_h100.yaml', 'w'), sort_keys=F
 Train:
 
 ```bash
-# WANDB_MODE=offline is required; the offline flag inside the YAML does not stop a login attempt
 # --runner-yaml points at the file written just above, not at train_pdb_subset.yaml
-WANDB_MODE=offline pixi run -e openfold3-cuda12 run_openfold train \
+pixi run -e openfold3-cuda12 run_openfold train \
     --runner-yaml datasets/quickstart_single_h100.yaml --seed 42
 ```
 
-Two epochs of four steps, a few minutes.
+Two epochs of four steps, a few minutes. The curve appears in your wandb project and updates
+as it trains. To run without an account, see [Without a wandb account](#without-a-wandb-account).
 
 Output goes to the `output_dir` set in the config:
 
@@ -523,15 +529,15 @@ Output goes to the `output_dir` set in the config:
 quickstart_run/
 ├── openfold3-quickstart/<run id>/checkpoints/
 │   └── last.ckpt                   the model, ~6 GB
-├── wandb/offline-run-<ts>-<run id>/
-│   ├── run-<run id>.wandb          the losses -- binary, see the next section
+├── wandb/<run dir>/
+│   ├── run-<run id>.wandb          the metrics, binary
 │   └── files/                      resolved configs, package versions
 └── logs/                           always empty
 ```
 
 Two traps in that layout. Enabling logging **moves the checkpoint** out of
-`quickstart_run/checkpoints/`, so hardcoded paths break. And `logs/` is always empty; the
-metrics live only in the binary `.wandb` file.
+`quickstart_run/checkpoints/`, so hardcoded paths break. And `logs/` is always empty, whichever
+logging mode you use.
 
 ### Scheme 2: multiple GPUs, one node
 
@@ -544,37 +550,8 @@ will live in `slurm/`.
 
 ### Monitoring the training curve
 
-The run writes its metrics to a local wandb file, not to `logs/`. Convert them to a CSV:
-
-```bash
-pixi run -e openfold3-cuda12 python -c "
-import csv, glob, json
-from wandb.proto import wandb_internal_pb2 as pb
-from wandb.sdk.internal import datastore
-
-store = datastore.DataStore()
-store.open_for_scan(glob.glob('quickstart_run/wandb/offline-run-*/run-*.wandb')[0])
-rows = []
-while True:
-    data = store.scan_data()
-    if data is None: break
-    rec = pb.Record(); rec.ParseFromString(data)
-    if rec.WhichOneof('record_type') != 'history': continue
-    row = {i.key or '.'.join(i.nested_key): json.loads(i.value_json) for i in rec.history.item}
-    if 'train/loss' in row: rows.append(row)
-
-cols = ['_step', 'train/loss', 'train/distogram_loss', 'train/diffusion_loss']
-with open('quickstart_run/metrics.csv', 'w', newline='') as f:
-    w = csv.DictWriter(f, fieldnames=cols, extrasaction='ignore'); w.writeheader(); w.writerows(rows)
-print(f'{len(rows)} steps -> quickstart_run/metrics.csv')"
-```
-
-The notebook runs the same extraction and prints the result as a table. For a quick look from
-a shell:
-
-```bash
-column -s, -t quickstart_run/metrics.csv
-```
+With logging on, the run streams to your wandb project and the curve updates while it trains.
+That is the whole of the default path: open the project page.
 
 Eight steps is too few to plot, so the figure below is the same pipeline run longer:
 `epoch_len: 25` and `max_epochs: 6`, which is 150 steps and about 25 minutes on one H100.
@@ -644,19 +621,53 @@ six points look like a healthy climb.
 
 </details>
 
-#### Watching it live instead
+#### Without a wandb account
 
-Offline logging only yields a curve once the run finishes. For a live dashboard, which is what
-you want for long runs and for the multi-GPU and Slurm stages, use wandb online:
+Everything above assumes a dashboard. The run also works fully offline, at the cost of two
+extra steps and a script to read the result back.
+
+Set `'offline': True` in the `wandb_config` block above, and set `WANDB_MODE=offline` in the
+environment as well. The YAML flag alone does not stop `wandb.init` attempting a login, and the
+run dies before training starts:
 
 ```bash
-pixi run -e openfold3-cuda12 wandb login     # once, needs a wandb account
+WANDB_MODE=offline pixi run -e openfold3-cuda12 run_openfold train \
+    --runner-yaml datasets/quickstart_single_h100.yaml --seed 42
 ```
 
-Then set `offline: false` in the config's `wandb_config` and drop `WANDB_MODE=offline` from the
-launch command. The run streams to your wandb project and the curve updates as it trains.
+There is no dashboard, and `logs/` stays empty. The metrics live in a binary `.wandb` file, so
+reading the curve means decoding it:
 
-An already-finished offline run can also be uploaded after the fact:
+```bash
+pixi run -e openfold3-cuda12 python -c "
+import csv, glob, json
+from wandb.proto import wandb_internal_pb2 as pb
+from wandb.sdk.internal import datastore
+
+store = datastore.DataStore()
+store.open_for_scan(glob.glob('quickstart_run/wandb/offline-run-*/run-*.wandb')[0])
+rows = []
+while True:
+    data = store.scan_data()
+    if data is None: break
+    rec = pb.Record(); rec.ParseFromString(data)
+    if rec.WhichOneof('record_type') != 'history': continue
+    row = {i.key or '.'.join(i.nested_key): json.loads(i.value_json) for i in rec.history.item}
+    if 'train/loss' in row: rows.append(row)
+
+cols = ['_step', 'train/loss', 'train/distogram_loss', 'train/diffusion_loss']
+with open('quickstart_run/metrics.csv', 'w', newline='') as f:
+    w = csv.DictWriter(f, fieldnames=cols, extrasaction='ignore'); w.writeheader(); w.writerows(rows)
+print(f'{len(rows)} steps -> quickstart_run/metrics.csv')"
+```
+
+```bash
+column -s, -t quickstart_run/metrics.csv
+```
+
+The notebook takes this path, so it runs without credentials, and prints the result as a table.
+
+A finished offline run can also be uploaded afterwards, which gets the dashboard back:
 
 ```bash
 pixi run -e openfold3-cuda12 wandb sync quickstart_run/wandb/offline-run-*
