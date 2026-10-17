@@ -787,11 +787,22 @@ pixi run -e openfold3-cuda12 run_openfold predict \
 ```
 
 <p align="center">
+  <img src="assets/demo_mdm2_chains.png" alt="Predicted complex, MDM2 in blue and the cyclic peptide in orange" width="360">
+</p>
+
+The predicted complex, one colour per chain: **MDM2 in blue**, the **cyclic peptide in
+orange**. The peptide lies across the shallow groove on the near face, which is where p53
+binds.
+
+Superposed on the crystal structure:
+
+<p align="center">
   <img src="assets/demo_mdm2.png" alt="Predicted MDM2 and cyclic peptide superposed on 1YCR" width="400">
 </p>
 
-Prediction in navy with the cyclic peptide in orange, the [1YCR](https://www.rcsb.org/structure/1YCR)
-crystal structure in grey with its p53 peptide in black.
+Prediction in navy with its cyclic peptide in orange, the
+[1YCR](https://www.rcsb.org/structure/1YCR) crystal structure in grey with its p53 peptide in
+black.
 
 | | |
 |---|---|
@@ -827,8 +838,16 @@ pixi run -e openfold3-cuda12 run_openfold predict \
     --output-dir ./demo_bla
 ```
 
-To see what the constraint buys, the same query was run again with the `pocket_constraint`
-block deleted and nothing else changed.
+<p align="center">
+  <img src="assets/demo_bla_chains.png" alt="Predicted complex, protein in blue, ligand in orange, constrained residues in green" width="620">
+</p>
+
+The predicted complex, one colour per component: the **protein in blue**, drawn translucent
+because the site is buried, the **ligand in orange**, and the **eight residues named in the
+constraint in green**. The ligand sits among them, which is what the constraint asked for.
+
+To see what that buys, the same query was run again with the `pocket_constraint` block deleted
+and nothing else changed.
 
 <p align="center">
   <img src="assets/demo_bla_pocket.png" alt="Constrained and unconstrained ligand placements on beta-lactamase" width="700">
