@@ -800,10 +800,13 @@ formed by the heavy chain's two long helices and β2-microglobulin tucked undern
 support subunit.
 
 <p align="center">
-  <img src="assets/demo_mhc_vs_1duz.png" alt="Predicted complex superposed on 1DUZ" width="340">
+  <img src="assets/demo_mhc_vs_1duz.png" alt="Predicted complex superposed on 1DUZ" width="400">
 </p>
 
-Prediction in navy, the 1DUZ crystal structure in grey.
+Prediction in navy, the 1DUZ crystal structure in grey. Both peptides are drawn as sticks,
+pale blue for the prediction and dark for the crystal, because a nine-residue chain has no
+secondary structure for a cartoon to trace and 3Dmol draws nothing at all for it. The two sit
+on top of each other in the groove, which is the 0.26 Å in the table.
 
 | Superposition | Cα RMSD | mean pLDDT | `chain_ptm` |
 |---|---|---|---|
