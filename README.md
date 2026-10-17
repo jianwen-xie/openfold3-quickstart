@@ -807,12 +807,24 @@ support subunit.
 
 **The colours change meaning between these two figures.** Above, a colour identifies the
 molecule. Here it identifies the structure: everything predicted is blue, everything from the
-1DUZ crystal is grey. So the peptide that was green above is the pale blue sticks here, and
-the dark sticks beside it are the crystal's own peptide. The two lie on top of each other in
-the groove, which is the 0.26 Å in the table.
+1DUZ crystal is grey.
 
-Both peptides are sticks rather than ribbon because a nine-residue chain has no secondary
-structure for a cartoon to trace, and 3Dmol draws nothing at all for it.
+Both peptides are in the groove, one inside the other. The crystal's is drawn as thick dark
+sticks and the predicted one as thinner pale blue sticks on top, because at this accuracy the
+prediction otherwise hides the crystal completely and the figure looks as though only one
+peptide were there. Measured in the frame of the whole complex, that is 0.55 Å mean per
+residue and 0.96 Å at worst:
+
+```
+residue   1     2     3     4     5     6     7     8     9
+dev (Å) 0.25  0.47  0.51  0.84  0.96  0.45  0.57  0.48  0.38
+```
+
+The 0.26 Å in the table is the peptide superposed on its own, which measures only its shape.
+The numbers here keep the assembly's frame, so they measure shape and placement together.
+
+Both are sticks rather than ribbon because a nine-residue chain has no secondary structure for
+a cartoon to trace, and 3Dmol draws nothing at all for it.
 
 | Superposition | Cα RMSD | mean pLDDT | `chain_ptm` |
 |---|---|---|---|
