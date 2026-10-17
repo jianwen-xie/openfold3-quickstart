@@ -767,6 +767,125 @@ Then edit the `%cd` in its first cell to point at your checkout.
 - Configuration reference: <https://openfold-3.readthedocs.io/en/latest/configuration_reference.html>
 - Datasets: <https://portal.openfold.omsf.io/datasets>
 
+## More inference demos
+
+Two further examples, kept separate from the quickstart above. Both run on one GPU in well
+under a minute and both are scored against a crystal structure. Each exercises a capability
+the three worked examples do not.
+
+### A cyclic peptide bound to MDM2
+
+A macrocyclic peptide inhibitor against the p53-binding domain of MDM2, a long-standing cancer
+target. The query marks the 10-residue chain `cyclic: true`, which asks for a closed
+macrocycle rather than a linear peptide:
+
+```bash
+pixi run -e openfold3-cuda12 run_openfold predict \
+    --query-json examples/example_inference_inputs/query_multimer_cyclic.json \
+    --use-msa-server true \
+    --output-dir ./demo_mdm2
+```
+
+<p align="center">
+  <img src="assets/demo_mdm2.png" alt="Predicted MDM2 and cyclic peptide superposed on 1YCR" width="400">
+</p>
+
+Prediction in navy with the cyclic peptide in orange, the [1YCR](https://www.rcsb.org/structure/1YCR)
+crystal structure in grey with its p53 peptide in black.
+
+| | |
+|---|---|
+| MDM2 domain Cα RMSD vs 1YCR | 0.59 Å over 85 residues |
+| Peptide centroid vs the p53 peptide in 1YCR | 4.16 Å |
+| Peptide closest approach to MDM2 | 2.42 Å |
+| Peptide N-terminus to C-terminus | 1.39 Å |
+| `avg_plddt` / `ptm` / `iptm` | 84.3 / 0.85 / 0.40 |
+| `chain_ptm` A (protein) / B (peptide) | 0.90 / 0.07 |
+
+Two things to take from this one.
+
+The cyclic request was honoured. The distance from the peptide's first backbone nitrogen to
+its last backbone carbon is 1.39 Å, which is a peptide bond, so the chain really is closed
+head to tail rather than drawn as a linear decamer that happens to curl round.
+
+And the model is openly unsure where it sits. The domain is near-exact at 0.59 Å and scores
+`chain_ptm` 0.90, while the peptide scores 0.07 and a mean pLDDT of 56. It does land in the
+p53 groove, in contact at 2.42 Å and with its centroid 4.2 Å from where p53 sits, but the
+confidence says do not trust the pose to better than that. For a designed macrocycle with no
+natural homologue, that is the honest answer.
+
+### Steering a ligand with a pocket constraint
+
+TEM-1 β-lactamase with FTA, a core-disrupting allosteric inhibitor, reproducing
+[1PZP](https://www.rcsb.org/structure/1PZP). The query carries a `pocket_constraint` naming
+eight residues the ligand should sit against:
+
+```bash
+pixi run -e openfold3-cuda12 run_openfold predict \
+    --query-json examples/example_inference_inputs/query_protein_ligand_pocket_constraint.json \
+    --use-msa-server true \
+    --output-dir ./demo_bla
+```
+
+To see what the constraint buys, the same query was run again with the `pocket_constraint`
+block deleted and nothing else changed.
+
+<p align="center">
+  <img src="assets/demo_bla_pocket.png" alt="Constrained and unconstrained ligand placements on beta-lactamase" width="700">
+</p>
+
+Protein and both crystallographic copies of FTA in grey and near-black, the constrained
+prediction's ligand in blue, the unconstrained one in orange.
+
+| | with the constraint | without it |
+|---|---|---|
+| Protein Cα RMSD vs 1PZP | 1.03 Å | 1.01 Å |
+| Ligand centroid vs crystal FTA | **3.44 Å** | **22.39 Å** |
+| Ligand closest approach to the eight named residues | 2.05 Å | 19.15 Å |
+| `iptm` | 0.607 | **0.859** |
+
+The constraint moves the ligand 19 Å and leaves the protein alone, which is what it is for.
+Dropping it does not produce a random pose either: the unconstrained ligand packs against
+S70, S130, N132 and K234, which is the catalytic active site. That is the obvious place to put
+a ligand on a β-lactamase, and it is the wrong one here, because FTA works allosterically.
+
+The `iptm` column is the part worth remembering. The wrong answer scores **0.859** and the
+right one **0.607**. Confidence is not accuracy, and on ligand placement it can point
+confidently at the textbook site while the real one sits 19 Å away. A pocket constraint is how
+you supply what the model cannot infer.
+
+<details>
+<summary>How the numbers and figures were produced</summary>
+
+Both predictions are scored by superposing on the reference protein and carrying the same
+transform to the ligand or peptide, as in the co-folding example above. Two details specific
+to these:
+
+Match residues by identity, not by overlap. The MDM2 prediction numbers its chain 1 to 92 and
+1YCR numbers the same domain 25 to 109. Choosing the offset that maximises how many residue
+ids overlap picks 17 and reports 10.10 Å; choosing the one that maximises identical residue
+names picks 22, matches 85 of 85, and reports 0.59 Å. The first number is an alignment error,
+not a prediction error.
+
+```python
+cand = []
+for o in range(-60, 61):
+    ids = [i for i in pred_names if i + o in ref_names]
+    if len(ids) < 30: continue
+    cand.append((sum(pred_names[i] == ref_names[i + o] for i in ids) / len(ids), o))
+offset = max(cand)[1]          # -> 22, at 100% identity
+```
+
+The β-lactamase query numbers its chain from 1 while 1PZP uses Ambler numbering from 26, an
+offset of 25. That also decodes the constraint: `pocket_residues` `[2, 5, 9, 12, 33, 34, 35,
+36]` becomes `[27, 30, 34, 37, 58, 59, 60, 61]`, which are the first eight of the 24 residues
+within 5 Å of FTA in the crystal. The constraint was read off the reference structure.
+
+1PZP contains two copies of FTA, 17.9 Å apart. The centroid distances quoted are to the nearer
+copy, and both copies appear in the figure.
+
+</details>
+
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE).
