@@ -847,6 +847,69 @@ Compare the MDM2 demo below, where the peptide also scores a low `chain_ptm`, 0.
 pLDDT is 56 and the model really is unsure. Here it is 94.3. A low `chain_ptm` on a short
 chain means nothing on its own; what distinguishes the two cases is pLDDT.
 
+### A protein bound to DNA
+
+Zif268, three zinc fingers wrapped around their DNA site, reproducing
+[1AAY](https://www.rcsb.org/structure/1AAY). Three molecule types in one query: an 85-residue
+protein, an 11 bp DNA duplex given as two `dna` chains, and the three structural Zn²⁺ ions the
+fingers fold around, given by CCD code.
+
+```bash
+# 6 chains: A protein, B and C the two DNA strands, D/E/F one Zn each
+pixi run -e openfold3-cuda12 run_openfold predict \
+    --query-json queries/query_zif268_dna.json \
+    --use-msa-server true \
+    --output-dir ./demo_zif
+```
+
+<p align="center">
+  <img src="assets/demo_zif_chains.png" alt="Predicted Zif268-DNA complex, one colour per component" width="470">
+</p>
+
+One colour per component: the **protein in blue**, the **two DNA strands in dark and light
+orange**, sharing a hue because they are one duplex, and the **three zinc ions as green
+spheres**. Each finger sits in the major groove and carries its own zinc.
+
+<p align="center">
+  <img src="assets/demo_zif_vs_1aay.png" alt="Predicted complex superposed on 1AAY" width="430">
+</p>
+
+Prediction in navy, 1AAY crystal structure in grey; colours here separate prediction from
+experiment, not component from component. The crystal's zinc ions are drawn as large
+translucent spheres with the predicted ones solid inside them.
+
+| Superposition | RMSD |
+|---|---|
+| Protein alone, 85 Cα | 0.46 Å |
+| DNA alone, 22 C1' | 0.34 Å |
+| Protein and DNA together, 107 atoms | **0.44 Å** |
+| Each Zn²⁺ to its crystal position | 0.23, 0.26, 0.49 Å |
+
+`avg_plddt` 95.6, `ptm` 0.94, `iptm` 0.95, no clashes, 12 s on one H100. Superposing protein
+and DNA in one go gives 0.44 Å, so the protein is not merely folded correctly but placed
+correctly on the duplex, and each zinc lands within half an ångström of its crystallographic
+site.
+
+**Reading per-chain scores on a mixed complex.** The pairwise numbers behave, up to a point:
+
+| | `chain_pair_iptm` |
+|---|---|
+| protein to each zinc | 0.99 |
+| protein to each DNA strand | 0.95 |
+| DNA strand to DNA strand | **0.50** |
+| zinc to zinc | **0.00** |
+
+The zinc-to-zinc zeros are the familiar case from the co-folding example above: three ions far
+apart with no interface, so there is nothing for the score to measure. The DNA pair is the one
+that misleads. The two strands are base paired, 2.64 Å apart at closest approach with ten of
+their N1 and N3 atoms inside hydrogen-bonding range, and the duplex matches the crystal to
+0.34 Å. It still scores 0.50.
+
+`chain_ptm` is worse here and should simply be ignored: 0.93 for the protein, 0.17 and 0.15
+for the DNA strands, and exactly 0.00 for each zinc. A single atom has no fold to score. As
+with the MHC peptide above, these are artefacts of chain length, not statements about
+accuracy.
+
 ### A cyclic peptide bound to MDM2
 
 A macrocyclic peptide inhibitor against the p53-binding domain of MDM2, a long-standing cancer
