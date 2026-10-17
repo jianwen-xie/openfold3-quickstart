@@ -370,7 +370,9 @@ chains and three distinct interfaces right at once.
   <img src="assets/psd_vs_7cnx.png" alt="Predicted assembly superposed on the 7CNX crystal structure" width="320">
 </p>
 
-Prediction in navy, crystal structure in grey, same orientation as above.
+Prediction in navy, crystal structure in grey, same orientation as above. The colours no
+longer identify chains as they did in the previous figure; here they separate the prediction
+from the experiment.
 
 | Superposition | Cα RMSD |
 |---|---|
@@ -803,10 +805,14 @@ support subunit.
   <img src="assets/demo_mhc_vs_1duz.png" alt="Predicted complex superposed on 1DUZ" width="400">
 </p>
 
-Prediction in navy, the 1DUZ crystal structure in grey. Both peptides are drawn as sticks,
-pale blue for the prediction and dark for the crystal, because a nine-residue chain has no
-secondary structure for a cartoon to trace and 3Dmol draws nothing at all for it. The two sit
-on top of each other in the groove, which is the 0.26 Å in the table.
+**The colours change meaning between these two figures.** Above, a colour identifies the
+molecule. Here it identifies the structure: everything predicted is blue, everything from the
+1DUZ crystal is grey. So the peptide that was green above is the pale blue sticks here, and
+the dark sticks beside it are the crystal's own peptide. The two lie on top of each other in
+the groove, which is the 0.26 Å in the table.
+
+Both peptides are sticks rather than ribbon because a nine-residue chain has no secondary
+structure for a cartoon to trace, and 3Dmol draws nothing at all for it.
 
 | Superposition | Cα RMSD | mean pLDDT | `chain_ptm` |
 |---|---|---|---|
@@ -909,8 +915,12 @@ and nothing else changed.
   <img src="assets/demo_bla_pocket.png" alt="Constrained and unconstrained ligand placements on beta-lactamase" width="700">
 </p>
 
-Protein and both crystallographic copies of FTA in grey and near-black, the constrained
-prediction's ligand in blue, the unconstrained one in orange.
+**The colours mean something different from the figure above.** There they identified the
+components; here they identify which run a ligand came from. The protein is drawn once, from
+the crystal, in grey, with both of its FTA copies in near-black. **Blue is the ligand the
+constrained run placed**, sitting on one of them. **Orange is the ligand the unconstrained run
+placed**, 19 Å away. So blue, which was the protein above, is now the right answer, and
+orange, which was the ligand above, is now the wrong one.
 
 | | with the constraint | without it |
 |---|---|---|
