@@ -1,0 +1,24 @@
+{
+    "seeds": [42],
+    "queries": {
+        "mhc_class_i": {
+            "chains": [
+                {
+                    "molecule_type": "protein",
+                    "chain_ids": ["A"],
+                    "sequence": "GSHSMRYFFTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQRMEPRAPWIEQEGPEYWDGETRKVKAHSQTHRVDLGTLRGYYNQSEAGSHTVQRMYGCDVGSDWRFLRGYHQYAYDGKDYIALKEDLRSWTAADMAAQTTKHKWEAAHVAEQLRAYLEGTCVEWLRRYLENGKETLQRTDAPKTHMTHHAVSDHEATLRCWALSFYPAEITLTWQRDGEDQTQDTELVETRPAGDGTFQKWAAVVVPSGQEQRYTCHVQHEGLPKPLTLRWE"
+                },
+                {
+                    "molecule_type": "protein",
+                    "chain_ids": ["B"],
+                    "sequence": "MIQRTPKIQVYSRHPAENGKSNFLNCYVSGFHPSDIEVDLLKNGERIEKVEHSDLSFSKDWSFYLLYYTEFTPTEKDEYACRVNHVTLSQPKIVKWDRDM"
+                },
+                {
+                    "molecule_type": "protein",
+                    "chain_ids": ["C"],
+                    "sequence": "LLFGYPVYV"
+                }
+            ]
+        }
+    }
+}

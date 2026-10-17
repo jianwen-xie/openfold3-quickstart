@@ -773,6 +773,59 @@ Two further examples, kept separate from the quickstart above. Both run on one G
 under a minute and both are scored against a crystal structure. Each exercises a capability
 the three worked examples do not.
 
+### Three different proteins at once
+
+MHC class I: a heavy chain, β2-microglobulin and a nine-residue antigen peptide, three
+separate molecules with nothing in common, assembling into one complex. The quickstart's
+co-folding example is four chains but only two distinct sequences; this is three.
+
+The query is three `protein` chains, built from [1DUZ](https://www.rcsb.org/structure/1DUZ),
+HLA-A2 presenting the HTLV-1 Tax peptide `LLFGYPVYV`:
+
+```bash
+# three chains: A heavy chain (275 res), B beta2-microglobulin (100), C peptide (9)
+pixi run -e openfold3-cuda12 run_openfold predict \
+    --query-json queries/query_mhc.json \
+    --use-msa-server true \
+    --output-dir ./demo_mhc
+```
+
+<p align="center">
+  <img src="assets/demo_mhc_chains.png" alt="Predicted MHC complex, one colour per chain" width="390">
+</p>
+
+One colour per protein: the **heavy chain in blue**, **β2-microglobulin in orange**, the
+**peptide in green**. The architecture comes out right, with the peptide clamped in the groove
+formed by the heavy chain's two long helices and β2-microglobulin tucked underneath as the
+support subunit.
+
+<p align="center">
+  <img src="assets/demo_mhc_vs_1duz.png" alt="Predicted complex superposed on 1DUZ" width="340">
+</p>
+
+Prediction in navy, the 1DUZ crystal structure in grey.
+
+| Superposition | Cα RMSD | mean pLDDT | `chain_ptm` |
+|---|---|---|---|
+| Heavy chain, 275 residues | 0.74 Å | 98.1 | 0.963 |
+| β2-microglobulin, 100 residues | 0.30 Å | 98.4 | 0.973 |
+| Peptide, 9 residues | 0.26 Å | 94.3 | **0.165** |
+| All three at once, 384 residues | **0.67 Å** | | |
+
+`avg_plddt` 95.8, `ptm` 0.98, `iptm` 0.98, no clashes. Every pairwise interface scores high:
+`(A, B)` 0.98, `(A, C)` 0.97, `(B, C)` 0.89. Superposing all three chains together gives
+0.67 Å, so the assembly is right and not just the parts.
+
+**One number in that table is lying.** The peptide scores `chain_ptm` 0.165, which reads like
+a failure, while its pLDDT is 94.3 and it is placed to 0.26 Å. pTM is a length-normalised
+score, and over nine residues the normalisation makes it pessimistic no matter how good the
+prediction is. For a chain this short, read `chain_pair_iptm` instead, which puts the
+peptide's interface with the heavy chain at 0.97.
+
+Compare the MDM2 demo below, where the peptide also scores a low `chain_ptm`, 0.07. There the
+pLDDT is 56 and the model really is unsure. Here it is 94.3. A low `chain_ptm` on a short
+chain means nothing on its own; what distinguishes the two cases is pLDDT.
+
 ### A cyclic peptide bound to MDM2
 
 A macrocyclic peptide inhibitor against the p53-binding domain of MDM2, a long-standing cancer
