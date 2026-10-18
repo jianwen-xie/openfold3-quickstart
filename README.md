@@ -127,54 +127,31 @@ right answer.
 <details>
 <summary>How this image was made</summary>
 
-Rendered with [3Dmol.js](https://3dmol.csb.pitt.edu/), the engine behind `py3Dmol`. The four
-bands need a colour function, because 3Dmol has no selection syntax for B-factor ranges:
-
-```html
-<script src="https://3dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
-<div id="v" style="width:1400px;height:1100px;position:relative"></div>
-<script>
-function band(atom) {               // pLDDT lives in the B-factor column
-  if (atom.b >= 90) return "#0053D6";   // very high
-  if (atom.b >= 70) return "#65CBF3";   // confident
-  if (atom.b >= 50) return "#FFDB13";   // low
-  return "#FF7D45";                     // very low
-}
-const v = $3Dmol.createViewer("v", {backgroundColor: "white"});
-v.addModel(cifText, "cif");
-v.setStyle({}, {cartoon: {colorfunc: band, thickness: 0.35}});
-v.addStyle({not: {atom: ["N", "C", "O"]}}, {stick: {radius: 0.12, colorfunc: band}});
-v.zoomTo(); v.rotate(60, "y"); v.zoom(1.3); v.render();
-</script>
-```
-
-`cifText` here is the prediction after it has been superposed onto the reference (the
-`pred_fitted` produced in the next section), so that this figure and the superposition below
-look at the molecule from the same angle. Rendering the raw file instead gives the same
-colours in a different orientation, which makes the two figures hard to compare.
-
-py3Dmol is a JavaScript widget, so it renders in a running notebook but not on GitHub. The
-static image above came from putting the above in an HTML page and screenshotting it:
-
 ```bash
-google-chrome --headless --disable-gpu --screenshot=out.png \
-    --window-size=1400,1100 --virtual-time-budget=25000 file:///tmp/view.html
+python3 scripts/render_figure.py plddt \
+    quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif \
+    assets/ubiquitin_cartoon.png --fit-to 1ubq.cif --rotate 60 --zoom 1.3 \
+    --width 620 --canvas 1400x1100
 ```
 
-`--virtual-time-budget` matters: without it the screenshot fires before WebGL has drawn
-anything and you get a blank canvas.
+That script does the whole job: superposing, rendering and trimming. It needs headless Chrome
+and ImageMagick, neither of which is in the pixi environment. See
+[Reproducing the figures](#reproducing-the-figures) for the other commands.
 
-From Python, `py3Dmol` cannot pass a JS function, so the closest one-liner is a continuous
-ramp rather than the four bands:
+Two things it handles that are easy to get wrong by hand.
+
+The four bands need a **colour function**, because 3Dmol has no selection syntax for B-factor
+ranges, and `py3Dmol` cannot pass a JavaScript function from Python. From Python the closest
+you get is a continuous ramp, which is not the same figure:
 
 ```python
-import py3Dmol
-view = py3Dmol.view(width=900, height=700)
-view.addModel(open("..._model.cif").read(), "cif")
 view.setStyle({}, {"cartoon": {"colorscheme":
     {"prop": "b", "gradient": "roygb", "min": 50, "max": 100}}})
-view.zoomTo(); view.show()
 ```
+
+And `--fit-to` renders the prediction **after superposing it on the reference**, so this figure
+and the superposition below look at the molecule from the same angle. Rendering the raw file
+gives the same colours in a different orientation, and the two figures become hard to compare.
 
 </details>
 
@@ -1079,6 +1056,58 @@ looked like a missing component when it was really an accurate one.
 copy, and both copies appear in the figure.
 
 </details>
+
+## Reproducing the figures
+
+`scripts/render_figure.py` builds the structure figures: it superposes, renders through
+headless Chrome, and trims and scales the result to a size that belongs in a README. A raw
+render is about 430 KB with large margins; the committed versions are 24 to 164 KB.
+
+It needs **biotite** (already in the pixi environment) plus **headless Chrome** and
+**ImageMagick**, which are not. It exits with a clear message if either is missing.
+
+```bash
+# colour by the four pLDDT bands
+python3 scripts/render_figure.py plddt MODEL.cif out.png --fit-to REF.cif --rotate 60
+
+# one colour per chain
+python3 scripts/render_figure.py chains MODEL.cif out.png --rotate 20 --sticks C
+
+# prediction superposed on a reference
+python3 scripts/render_figure.py super MODEL.cif REF.cif out.png --rotate 70
+```
+
+The commands behind the figures above, each run from the `openfold-3` checkout:
+
+| Figure | Command |
+|---|---|
+| `ubiquitin_cartoon.png` | `plddt … --fit-to 1ubq.cif --rotate 60 --zoom 1.3 --width 620 --canvas 1400x1100` |
+| `ubiquitin_vs_1ubq.png` | `super … 1ubq.cif --rotate 60 --zoom 1.3 --width 540 --canvas 1400x1100` |
+| `psd_chains.png` | `chains … --rotate 20 --tilt 10 --zoom 1.10 --width 640 --canvas 1050x1200` |
+| `demo_mhc_chains.png` | `chains … --rotate 70 --zoom 0.98 --sticks C --width 440 --canvas 1200x1000` |
+| `demo_mhc_vs_1duz.png` | `super … 1duz.cif --rotate 70 --zoom 0.98 --sticks C --ref-sticks F --ref-chains D,E,F --width 420` |
+| `demo_zif_chains.png` | `chains … --rotate 60 --zoom 0.98 --spheres ZN --colour 'B:#eb6834' --colour 'C:#f6b08c' --colour 'ZN:#1baf7a' --width 470` |
+| `demo_zif_vs_1aay.png` | `super … 1aay.cif --rotate 60 --zoom 0.98 --spheres ZN --width 430 --canvas 1250x1000` |
+
+Three flags exist because of problems that are invisible until the figure is wrong.
+
+`--ref-chains` picks which copy of a complex to score against, and drops the others from the
+picture. 1DUZ holds two copies of the MHC complex; without the flag the prediction aligns to
+whichever copy shares its chain ids, the second copy is drawn unaligned in the corner, and the
+RMSD comes out 0.63 Å instead of the 0.67 Å quoted above.
+
+`--sticks` and `--spheres` exist because a cartoon is not always drawn. A nine-residue peptide
+has no secondary structure to trace and renders as nothing at all, and a predicted ion
+disappears inside an opaque crystal sphere, so in both cases the figure looks as though a
+component is missing when it is simply accurate.
+
+`--colour` pins a chain to a colour. The default palette gives every chain a different hue,
+which is wrong for the two strands of one DNA duplex: they should share a hue so they read as
+a pair.
+
+Two figures are not covered. `lysozyme_toluene.png` is a two-panel composite with a cavity
+close-up, and `demo_bla_pocket.png` overlays three structures at once. Their code stays inline
+in the sections above. `training_curve.png` is matplotlib, and its code is inline too.
 
 ## License
 
