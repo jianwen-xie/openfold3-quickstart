@@ -1017,15 +1017,15 @@ you supply what the model cannot infer.
 <details>
 <summary>How the numbers and figures were produced</summary>
 
-Both predictions are scored by superposing on the reference protein and carrying the same
-transform to the ligand or peptide, as in the co-folding example above. Two details specific
-to these:
+All four are scored the same way: superpose on the reference protein, carry that one transform
+to every other component, then measure. What differs between them is how the residues get
+matched up in the first place, and each one has its own trap.
 
-Match residues by identity, not by overlap. The MDM2 prediction numbers its chain 1 to 92 and
+**Match by identity, not by overlap.** The MDM2 prediction numbers its chain 1 to 92 while
 1YCR numbers the same domain 25 to 109. Choosing the offset that maximises how many residue
-ids overlap picks 17 and reports 10.10 Å; choosing the one that maximises identical residue
-names picks 22, matches 85 of 85, and reports 0.59 Å. The first number is an alignment error,
-not a prediction error.
+ids happen to overlap picks 17 and reports 10.10 Å. Choosing the one that maximises identical
+residue *names* picks 22, matches 85 of 85, and reports 0.59 Å. The first is an alignment
+error wearing the costume of a prediction error.
 
 ```python
 cand = []
@@ -1036,10 +1036,44 @@ for o in range(-60, 61):
 offset = max(cand)[1]          # -> 22, at 100% identity
 ```
 
-The β-lactamase query numbers its chain from 1 while 1PZP uses Ambler numbering from 26, an
-offset of 25. That also decodes the constraint: `pocket_residues` `[2, 5, 9, 12, 33, 34, 35,
-36]` becomes `[27, 30, 34, 37, 58, 59, 60, 61]`, which are the first eight of the 24 residues
-within 5 Å of FTA in the crystal. The constraint was read off the reference structure.
+**No single offset works across a whole structure.** Each demo needs its own, and MHC needs
+one per chain:
+
+| | offset to its reference |
+|---|---|
+| MHC heavy chain / β2m / peptide | 0 / **-1** / 0 |
+| Zif268 protein, 1 to 85 against 1AAY's 103 to 187 | 102 |
+| β-lactamase, 1-based against 1PZP's Ambler numbering | 25 |
+| MDM2 domain against 1YCR | 22 |
+
+β2-microglobulin's `-1` is the kind of thing that is invisible until it is wrong: match on
+residue id alone and every residue shifts by one, which still superposes and still returns a
+plausible number.
+
+**DNA cannot be matched on residue id at all.** 1AAY numbers its two strands 1 to 11 and 51 to
+61; the prediction numbers both 1 to 11. Matching on id would silently drop the second strand
+entirely and leave you scoring half a duplex. They are paired by order along each strand
+instead, on C1', which is safe only because both strands have the same length and the same
+5' to 3' sense:
+
+```python
+def strand(arr, ch):
+    s = arr[(arr.chain_id == ch) & (arr.atom_name == "C1'")]
+    return s.coord[np.argsort(s.res_id)]
+```
+
+**Decoding the pocket constraint.** The β-lactamase offset of 25 also translates the
+constraint: `pocket_residues` `[2, 5, 9, 12, 33, 34, 35, 36]` becomes `[27, 30, 34, 37, 58,
+59, 60, 61]`, which are the first eight of the 24 residues within 5 Å of FTA in the crystal.
+The constraint was read off the reference structure.
+
+**Two figure traps, both of which hide the component the example is about.** A nine-residue
+peptide has no secondary structure for a cartoon to trace, so 3Dmol draws nothing at all for
+it and the MHC superposition appeared to contain two chains rather than three; both peptides
+are sticks for that reason. And a predicted ion sitting a quarter of an ångström inside an
+opaque crystal sphere is invisible, so in the Zif268 superposition the crystal's zincs are
+large and translucent with the predicted ones solid inside. In both cases the first render
+looked like a missing component when it was really an accurate one.
 
 1PZP contains two copies of FTA, 17.9 Å apart. The centroid distances quoted are to the nearer
 copy, and both copies appear in the figure.
