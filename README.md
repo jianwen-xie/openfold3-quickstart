@@ -128,15 +128,16 @@ right answer.
 <summary>How this image was made</summary>
 
 ```bash
-python3 scripts/render_figure.py plddt \
+# from the openfold-3 checkout, with QS pointing at a clone of this repo
+python3 $QS/scripts/render_figure.py plddt \
     quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif \
-    assets/ubiquitin_cartoon.png --fit-to 1ubq.cif --rotate 60 --zoom 1.3 \
+    $QS/assets/ubiquitin_cartoon.png --fit-to 1ubq.cif --rotate 60 --zoom 1.3 \
     --width 620 --canvas 1400x1100
 ```
 
-That script does the whole job: superposing, rendering and trimming. It needs headless Chrome
-and ImageMagick, neither of which is in the pixi environment. See
-[Reproducing the figures](#reproducing-the-figures) for the other commands.
+That script does the whole job: superposing, rendering and trimming. See
+[Reproducing the figures](#reproducing-the-figures) for how to get it, what else it needs, and
+the commands behind the other figures.
 
 Two things it handles that are easy to get wrong by hand.
 
@@ -1066,18 +1067,36 @@ render is about 430 KB with large margins; the committed versions are 24 to 164 
 It needs **biotite** (already in the pixi environment) plus **headless Chrome** and
 **ImageMagick**, which are not. It exits with a clear message if either is missing.
 
+Two checkouts are involved, so fix the paths before running anything. The predictions and the
+downloaded references live in `openfold-3`; the script and the figures live here:
+
 ```bash
-# colour by the four pLDDT bands
-python3 scripts/render_figure.py plddt MODEL.cif out.png --fit-to REF.cif --rotate 60
+git clone --depth 1 https://github.com/jianwen-xie/openfold3-quickstart.git
+QS=$PWD/openfold3-quickstart        # this repo
 
-# one colour per chain
-python3 scripts/render_figure.py chains MODEL.cif out.png --rotate 20 --sticks C
-
-# prediction superposed on a reference
-python3 scripts/render_figure.py super MODEL.cif REF.cif out.png --rotate 70
+cd /path/to/openfold-3              # run from here: that is where the predictions are
 ```
 
-The commands behind the figures above, each run from the `openfold-3` checkout:
+Then every command below is `python3 $QS/scripts/render_figure.py …`, writing into
+`$QS/assets/`:
+
+```bash
+# colour by the four pLDDT bands
+python3 $QS/scripts/render_figure.py plddt MODEL.cif $QS/assets/out.png --fit-to REF.cif
+
+# one colour per chain
+python3 $QS/scripts/render_figure.py chains MODEL.cif $QS/assets/out.png --sticks C
+
+# prediction superposed on a reference
+python3 $QS/scripts/render_figure.py super MODEL.cif REF.cif $QS/assets/out.png
+```
+
+Re-running a command reproduces the figure, not the file. The script standardises the margin
+and the palette step, while the committed assets were made over time with slightly different
+trims, so git will report the asset as modified even when the image is the same picture.
+Expect a pixel or two of height difference, not a different figure.
+
+The arguments behind each figure, all run from the `openfold-3` checkout as above:
 
 | Figure | Command |
 |---|---|
