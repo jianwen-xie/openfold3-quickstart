@@ -130,11 +130,9 @@ right answer.
 `scripts/render_figure.py` in this repo does the whole job: superpose, render through
 headless Chrome, then trim and scale to a size that belongs in a README.
 
-Set it up once inside your `openfold-3` checkout. Keeping the script, the reference structures
-and the output in a single `figures/` directory leaves one untracked entry in that repository
-rather than a scatter of loose files, and anything scored against an experimental structure
-needs that structure too. RCSB serves them under an uppercase id, so name the download
-explicitly with `-o`:
+Set it up once inside your `openfold-3` checkout, keeping the script, the references and the
+output together in `figures/`. Anything scored against an experimental structure needs that
+structure, and RCSB serves them under an uppercase id, so name the download with `-o`:
 
 ```bash
 mkdir -p figures && cd figures
@@ -150,13 +148,6 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py plddt \
     quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif \
     figures/ubiquitin_cartoon.png --fit-to figures/1ubq.cif --rotate 60 --zoom 1.3 \
     --width 620 --canvas 1400x1100
-```
-
-`openfold-3` is someone else's repository, so if the directory bothers you, hide it from git
-without touching their `.gitignore`:
-
-```bash
-echo "figures/" >> .git/info/exclude
 ```
 
 Running it through `pixi run` is what supplies biotite. Chrome and ImageMagick have to be on
