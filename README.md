@@ -133,13 +133,14 @@ headless Chrome, then trim and scale to a size that belongs in a README. Copy it
 standing in:
 
 ```bash
-# if you already have this repo checked out somewhere
-cp /path/to/openfold3-quickstart/scripts/render_figure.py .
+curl -O https://raw.githubusercontent.com/jianwen-xie/openfold3-quickstart/main/scripts/render_figure.py
+```
 
-# or fetch just the script. This repo is private, so the clone needs your own
-# GitHub access; an unauthenticated clone reports "Repository not found".
-git clone --depth 1 git@github.com:jianwen-xie/openfold3-quickstart.git /tmp/of3-qs
-cp /tmp/of3-qs/scripts/render_figure.py .
+Anything scored against an experimental structure also needs that structure. RCSB serves them
+under an uppercase id, so name the output explicitly rather than using `curl -O`:
+
+```bash
+curl -o 1ubq.cif https://files.rcsb.org/download/1UBQ.cif
 ```
 
 ```bash
@@ -1072,8 +1073,15 @@ looked like a missing component when it was really an accurate one.
 1PZP contains two copies of FTA, 17.9 Å apart. The centroid distances quoted are to the nearer
 copy, and both copies appear in the figure.
 
-**The commands.** With `render_figure.py` copied into the `openfold-3` checkout as in the
-first example, prefixed by `pixi run -e openfold3-cuda12 python`:
+**The commands.** With `render_figure.py` in the `openfold-3` checkout as in the first
+example, and the two references fetched the same way:
+
+```bash
+curl -o 1duz.cif https://files.rcsb.org/download/1DUZ.cif
+curl -o 1aay.cif https://files.rcsb.org/download/1AAY.cif
+```
+
+Each command below is prefixed by `pixi run -e openfold3-cuda12 python`:
 
 ```bash
 render_figure.py chains demo_mhc/.../sample_1_model.cif demo_mhc_chains.png \
