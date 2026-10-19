@@ -251,7 +251,7 @@ Confidence is not the interesting question here: lysozyme folds correctly either
 right pose, so the figure to look at is the superposition:
 
 <p align="center">
-  <img src="assets/lysozyme_toluene.png" alt="Predicted lysozyme-toluene complex superposed on 7L39" width="560">
+  <img src="assets/lysozyme_toluene.png" alt="Predicted lysozyme-toluene complex superposed on 7L39" width="600">
 </p>
 
 Prediction in navy, crystal structure in grey. **Left:** the whole complex. The binding
@@ -290,10 +290,10 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py super \
     figures/lyso_right.png --focus LIG0 --focus-ref MBN --zoom 0.62 --width 420 --canvas 1000x1000
 
 convert \
-    \( figures/lyso_left.png  -background white -gravity east -splice 30x0 \) \
-    \( figures/lyso_right.png -background white -gravity west -splice 30x0 \) \
+    \( figures/lyso_left.png  -background white -gravity east -splice 110x0 \) \
+    \( figures/lyso_right.png -background white -gravity west -splice 110x0 \) \
     -background white -gravity center +append \
-    -resize 846x -colors 256 -strip figures/lysozyme_toluene.png
+    -resize 900x -colors 256 -strip figures/lysozyme_toluene.png
 ```
 
 Both panels name the crystal's copy of the ligand explicitly, as `--ref-ligand` or
@@ -302,7 +302,7 @@ prediction, `MBN` in the crystal. Without naming it, only the predicted copy is 
 
 Two details in the montage. `-gravity center` pads the shorter render to the taller one's
 height, because each is trimmed to its own content and a plain `+append` would align their
-tops and leave the frames ending at different levels. The `\( … \)` groups put a 30px gap
+tops and leave the frames ending at different levels. The `\( … \)` groups put a gap
 between the panels by padding only their inner edges; applied ungrouped, `-splice` runs
 against every image in the sequence and slices both panels apart.
 
