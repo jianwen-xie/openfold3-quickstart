@@ -278,6 +278,8 @@ Two renders, side by side. The second uses `--focus`, which frames a bound ligan
 the protein translucent with the pocket's side chains around it:
 
 ```bash
+curl -o figures/7l39.cif https://files.rcsb.org/download/7L39.cif
+
 pixi run -e openfold3-cuda12 python figures/render_figure.py super \
     quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif figures/7l39.cif \
     figures/lyso_left.png --ref-ligand MBN \
@@ -355,6 +357,8 @@ from the experiment.
 <summary>How this figure was made</summary>
 
 ```bash
+curl -o figures/7cnx.cif https://files.rcsb.org/download/7CNX.cif
+
 pixi run -e openfold3-cuda12 python figures/render_figure.py super  quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif \
     figures/7cnx.cif figures/psd_vs_7cnx.png --ref-chains A,B,C,D \
     --rotate 20 --tilt 10 --zoom 1.10 --width 640 --canvas 1050x1200
