@@ -127,17 +127,28 @@ right answer.
 <details>
 <summary>How this image was made</summary>
 
+`scripts/render_figure.py` in this repo does the whole job: superpose, render through
+headless Chrome, then trim and scale to a size that belongs in a README. Copy it into your
+`openfold-3` checkout once, and every path below is relative to the directory you are already
+standing in:
+
 ```bash
-# from the openfold-3 checkout, with render_figure.py copied into it
+git clone --depth 1 https://github.com/jianwen-xie/openfold3-quickstart.git /tmp/of3-qs
+cp /tmp/of3-qs/scripts/render_figure.py .
+```
+
+```bash
 pixi run -e openfold3-cuda12 python render_figure.py plddt \
     quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif \
     ubiquitin_cartoon.png --fit-to 1ubq.cif --rotate 60 --zoom 1.3 \
     --width 620 --canvas 1400x1100
 ```
 
-That script does the whole job: superposing, rendering and trimming. See
-[Reproducing the figures](#reproducing-the-figures) for how to get it, what else it needs, and
-the commands behind the other figures.
+Running it through `pixi run` is what supplies biotite. Chrome and ImageMagick have to be on
+your `PATH` already; the script exits with a clear message if either is missing. Re-running
+reproduces the figure but not the file: the margin is standardised here while the committed
+assets were trimmed slightly differently as they were made, so expect a pixel or two of
+difference.
 
 Two things it handles that are easy to get wrong by hand.
 
@@ -1056,77 +1067,35 @@ looked like a missing component when it was really an accurate one.
 1PZP contains two copies of FTA, 17.9 Å apart. The centroid distances quoted are to the nearer
 copy, and both copies appear in the figure.
 
+**The commands.** With `render_figure.py` copied into the `openfold-3` checkout as in the
+first example, prefixed by `pixi run -e openfold3-cuda12 python`:
+
+```bash
+render_figure.py chains demo_mhc/.../sample_1_model.cif demo_mhc_chains.png \
+    --rotate 70 --zoom 0.98 --sticks C --width 440 --canvas 1200x1000
+
+render_figure.py super  demo_mhc/.../sample_1_model.cif 1duz.cif demo_mhc_vs_1duz.png \
+    --rotate 70 --zoom 0.98 --sticks C --ref-sticks F --ref-chains D,E,F --width 420
+
+render_figure.py chains demo_zif/.../sample_1_model.cif demo_zif_chains.png \
+    --rotate 60 --zoom 0.98 --spheres ZN --width 470 \
+    --colour 'B:#eb6834' --colour 'C:#f6b08c' --colour 'ZN:#1baf7a'
+
+render_figure.py super  demo_zif/.../sample_1_model.cif 1aay.cif demo_zif_vs_1aay.png \
+    --rotate 60 --zoom 0.98 --spheres ZN --width 430 --canvas 1250x1000
+```
+
+Three of those flags exist because of the traps above. `--ref-chains` picks which copy of a
+complex to score against and drops the others from the picture: without it the prediction
+aligns to whichever 1DUZ copy shares its chain ids, the second copy is drawn unaligned in the
+corner, and the RMSD reads 0.63 Å rather than 0.67 Å. `--sticks` and `--spheres` force a
+representation where a cartoon draws nothing. `--colour` pins a chain, so the two strands of
+one duplex share a hue instead of being handed separate ones by the default palette.
+
+The two-panel lysozyme close-up and the three-structure β-lactamase overlay are not covered by
+the script; their code stays inline in the sections above.
+
 </details>
-
-## Reproducing the figures
-
-`scripts/render_figure.py` builds the structure figures: it superposes, renders through
-headless Chrome, and trims and scales the result to a size that belongs in a README. A raw
-render is about 430 KB with large margins; the committed versions are 24 to 164 KB.
-
-It needs **biotite** (already in the pixi environment) plus **headless Chrome** and
-**ImageMagick**, which are not. It exits with a clear message if either is missing.
-
-Everything below runs from the **`openfold-3` checkout**, where the predictions and the
-downloaded reference structures already are. Install the script into it once:
-
-```bash
-git clone --depth 1 https://github.com/jianwen-xie/openfold3-quickstart.git /tmp/of3-qs
-cp /tmp/of3-qs/scripts/render_figure.py .
-```
-
-Then render:
-
-```bash
-# colour by the four pLDDT bands
-pixi run -e openfold3-cuda12 python render_figure.py plddt MODEL.cif out.png --fit-to REF.cif
-
-# one colour per chain
-pixi run -e openfold3-cuda12 python render_figure.py chains MODEL.cif out.png --sticks C
-
-# prediction superposed on a reference
-pixi run -e openfold3-cuda12 python render_figure.py super MODEL.cif REF.cif out.png
-```
-
-Running it through `pixi run` is what supplies biotite. Chrome and ImageMagick have to be on
-your `PATH` already.
-
-Re-running a command reproduces the figure, not the file. The script standardises the margin
-and the palette step, while the committed assets were made over time with slightly different
-trims, so a regenerated figure differs from the committed one by a pixel or two of height.
-Same picture, different bytes.
-
-The arguments behind each figure, all run from `openfold-3` as above:
-
-| Figure | Command |
-|---|---|
-| `ubiquitin_cartoon.png` | `plddt … --fit-to 1ubq.cif --rotate 60 --zoom 1.3 --width 620 --canvas 1400x1100` |
-| `ubiquitin_vs_1ubq.png` | `super … 1ubq.cif --rotate 60 --zoom 1.3 --width 540 --canvas 1400x1100` |
-| `psd_chains.png` | `chains … --rotate 20 --tilt 10 --zoom 1.10 --width 640 --canvas 1050x1200` |
-| `demo_mhc_chains.png` | `chains … --rotate 70 --zoom 0.98 --sticks C --width 440 --canvas 1200x1000` |
-| `demo_mhc_vs_1duz.png` | `super … 1duz.cif --rotate 70 --zoom 0.98 --sticks C --ref-sticks F --ref-chains D,E,F --width 420` |
-| `demo_zif_chains.png` | `chains … --rotate 60 --zoom 0.98 --spheres ZN --colour 'B:#eb6834' --colour 'C:#f6b08c' --colour 'ZN:#1baf7a' --width 470` |
-| `demo_zif_vs_1aay.png` | `super … 1aay.cif --rotate 60 --zoom 0.98 --spheres ZN --width 430 --canvas 1250x1000` |
-
-Three flags exist because of problems that are invisible until the figure is wrong.
-
-`--ref-chains` picks which copy of a complex to score against, and drops the others from the
-picture. 1DUZ holds two copies of the MHC complex; without the flag the prediction aligns to
-whichever copy shares its chain ids, the second copy is drawn unaligned in the corner, and the
-RMSD comes out 0.63 Å instead of the 0.67 Å quoted above.
-
-`--sticks` and `--spheres` exist because a cartoon is not always drawn. A nine-residue peptide
-has no secondary structure to trace and renders as nothing at all, and a predicted ion
-disappears inside an opaque crystal sphere, so in both cases the figure looks as though a
-component is missing when it is simply accurate.
-
-`--colour` pins a chain to a colour. The default palette gives every chain a different hue,
-which is wrong for the two strands of one DNA duplex: they should share a hue so they read as
-a pair.
-
-Two figures are not covered. `lysozyme_toluene.png` is a two-panel composite with a cavity
-close-up, and `demo_bla_pocket.png` overlays three structures at once. Their code stays inline
-in the sections above. `training_curve.png` is matplotlib, and its code is inline too.
 
 ## License
 
