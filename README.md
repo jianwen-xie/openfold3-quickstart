@@ -271,56 +271,27 @@ read `0.0` for ubiquitin, where a single chain has no interface to score. For an
 more than one component it is the number to watch, not `ptm`.
 
 <details>
-<summary>How this image was made</summary>
+<summary>How this figure was made</summary>
 
-Superpose on the protein, then carry the same transform to the ligand so its position is
-compared in the reference's frame:
+Two renders, side by side. The second uses `--focus`, which frames a bound ligand and draws
+the protein translucent with the pocket's side chains around it:
 
-```python
-import biotite.structure as struc, biotite.structure.io.pdbx as pdbx
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py super \
+    quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif figures/7l39.cif \
+    figures/lyso_left.png --rotate 0 --zoom 1.2 --width 420 --canvas 1000x1000
 
-pred = pdbx.get_structure(pdbx.CIFFile.read(
-    "quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif"), model=1)
-ref = pdbx.get_structure(pdbx.CIFFile.read("7l39.cif"), model=1)
+pixi run -e openfold3-cuda12 python figures/render_figure.py super \
+    quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif figures/7l39.cif \
+    figures/lyso_right.png --focus LIG0 --focus-ref MBN --zoom 0.62 --width 420 --canvas 1000x1000
 
-pred_ca = pred[struc.filter_amino_acids(pred) & (pred.atom_name == "CA")]
-ref_ca = ref[struc.filter_amino_acids(ref) & ~ref.hetero & (ref.atom_name == "CA")]
-n = min(pred_ca.array_length(), ref_ca.array_length())
-fitted, transform = struc.superimpose(ref_ca[:n], pred_ca[:n])
-print(f"protein RMSD {struc.rmsd(ref_ca[:n], fitted):.2f} A")
-
-pred_fit = transform.apply(pred)                      # ligand moves with the protein
-lig_pred = pred_fit[pred_fit.res_name == "LIG0"]      # predicted ligand is named LIG0
-lig_ref = ref[(ref.res_name == "MBN") & (ref.element != "H")]   # MBN = toluene
-import numpy as np
-print(f"ligand centroid {np.linalg.norm(lig_pred.coord.mean(0) - lig_ref.coord.mean(0)):.2f} A")
-
-# write both as mmCIF -- PDB format rejects the 4-character residue name LIG0
-for name, arr in (("pred", pred_fit), ("ref", ref)):
-    f = pdbx.CIFFile(); pdbx.set_structure(f, arr); f.write(f"{name}.cif")
+convert figures/lyso_left.png figures/lyso_right.png +append \
+    -resize 846x -colors 256 -strip figures/lysozyme_toluene.png
 ```
 
-The `[:n]` truncation is safe here only because both structures are numbered contiguously from
-1 and the crystal simply stops two residues earlier, so the first 162 line up one to one. It
-would silently misalign against a reference with internal gaps or a different numbering. The
-complex example below shows how to match residues properly when that happens.
-
-Then render as before, with two changes: the ligands get their own stick style, and the
-close-up drops the cartoon to 35% opacity because the toluene is buried and an opaque ribbon
-hides it.
-
-```js
-v.addModel(ref, "cif");
-v.setStyle({model:0}, {cartoon:{color:"#dedede", thickness:0.28, opacity:0.35}});
-v.setStyle({model:0, resn:"MBN"}, {stick:{radius:0.28, color:"#777777"}});
-v.addModel(pred, "cif");
-v.setStyle({model:1}, {cartoon:{color:"#27408B", thickness:0.28, opacity:0.35}});
-v.setStyle({model:1, resn:"LIG0"}, {stick:{radius:0.28, color:"#1f6feb"}});
-// cavity-lining side chains for context, then frame on the ligand
-v.addStyle({model:0, within:{distance:6.0, sel:{resn:"MBN"}}, hetflag:false},
-           {stick:{radius:0.10, color:"#999999"}});
-v.zoomTo({model:0, resn:"MBN"}); v.zoom(0.62); v.render();
-```
+`--focus-ref MBN` is needed because the two files name the same molecule differently: the
+prediction calls it `LIG0` and the crystal calls it `MBN`. Without the translucency the
+cavity is buried and an opaque ribbon hides the ligand completely.
 
 </details>
 
@@ -1175,10 +1146,10 @@ looked like a missing component when it was really an accurate one.
 1PZP contains two copies of FTA, 17.9 Å apart. The centroid distances quoted are to the nearer
 copy, and both copies appear in the figure.
 
-Three figures are hand-made and not reproducible from the script: the two-panel lysozyme
-close-up, the three-structure β-lactamase overlay, and the MDM2 superposition, which keeps the
-peptide's own colour instead of folding it into the prediction colour and scores the domain
-alone rather than the complex. Their code stays inline in the sections above.
+Two figures are not reproducible from the script: the three-structure β-lactamase overlay, and
+the MDM2 superposition, which keeps the peptide's own colour instead of folding it into the
+prediction colour and scores the domain alone rather than the complex. Their code stays inline
+in the sections above.
 
 </details>
 

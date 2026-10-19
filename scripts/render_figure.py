@@ -165,6 +165,21 @@ def style_chains(chains, sticks, translucent, spheres, override=None):
     return "\n".join(out)
 
 
+def style_focus(pred_resn: str, ref_resn: str, radius: float) -> str:
+    """Close up on a bound ligand: translucent protein, the pocket's side chains, both copies
+    of the ligand. The cartoon stays visible rather than washing out to white, which is what
+    happens below roughly 50% opacity on a pale colour."""
+    return "\n".join([
+        f'v.setStyle({{model:0}}, {{cartoon:{{color:"#b9bec9", thickness:0.26, opacity:0.68}}}});',
+        f'v.setStyle({{model:1}}, {{cartoon:{{color:"#27408B", thickness:0.26, opacity:0.68}}}});',
+        f'v.setStyle({{model:0, resn:"{ref_resn}"}}, {{stick:{{radius:0.30, color:"#1a1a1a"}}}});',
+        f'v.setStyle({{model:1, resn:"{pred_resn}"}}, {{stick:{{radius:0.30, color:"#2a78d6"}}}});',
+        # the residues lining the pocket, for context
+        f'v.addStyle({{model:0, within:{{distance:{radius}, sel:{{resn:"{ref_resn}"}}}}, hetflag:false}},'
+        f' {{stick:{{radius:0.10, color:"#8b8b8b"}}}});',
+    ])
+
+
 def style_super(sticks, ref_sticks, spheres):
     out = [
         'v.setStyle({model:0}, {cartoon:{color:"#d4d4d4", thickness:0.28}});',
@@ -249,6 +264,14 @@ def main():
                     help="pin a chain id or residue name to a colour, e.g. --colour C:#f6b08c. "
                          "Repeatable. Use it to give two strands of one duplex the same hue so "
                          "they read as a pair rather than as unrelated chains.")
+    ap.add_argument("--focus", metavar="RESN",
+                    help="super mode: close up on this residue name, e.g. LIG0 for a predicted "
+                         "ligand. Draws the protein translucent and the pocket's side chains, "
+                         "since an opaque ribbon hides a buried ligand entirely.")
+    ap.add_argument("--focus-ref", metavar="RESN",
+                    help="the reference's name for the --focus residue, if it differs")
+    ap.add_argument("--focus-radius", type=float, default=6.0,
+                    help="how far around --focus to draw side chains (default 6 A)")
     ap.add_argument("--residues", metavar="LO-HI",
                     help="score mode: restrict to this residue range, e.g. 1-72 to exclude a "
                          "flexible tail. Repeatable for several ranges.", action="append",
@@ -304,7 +327,10 @@ def main():
         pred, rmsd, n = superpose(pred, ref, cmap)
         print(f"  superposed: {rmsd:.2f} A over {n} matched atoms")
         models = [to_cif_text(ref, tmp, "_ref"), to_cif_text(pred, tmp, "_pred")]
-        style = style_super(a.sticks, a.ref_sticks, a.spheres)
+        if a.focus:
+            style = style_focus(a.focus, a.focus_ref or a.focus, a.focus_radius)
+        else:
+            style = style_super(a.sticks, a.ref_sticks, a.spheres)
     else:
         if a.fit_to:
             ref = load(a.fit_to)
@@ -323,7 +349,11 @@ def main():
                                    a.translucent, a.spheres, override))
 
     w, h = (int(x) for x in a.canvas.lower().split("x"))
-    html = PAGE % dict(w=w, h=h, bands=BANDS if a.mode == "plddt" else "",
+    page = PAGE
+    if a.mode == "super" and a.focus:
+        page = PAGE.replace('v.zoomTo();',
+                            'v.zoomTo({model:0, resn:"%s"});' % (a.focus_ref or a.focus))
+    html = page % dict(w=w, h=h, bands=BANDS if a.mode == "plddt" else "",
                        models=json.dumps(models), bg="white", style=style,
                        rot=a.rotate, tilt=a.tilt, zoom=a.zoom)
     render(html, out_png, (w, h), a.width, a.border)
