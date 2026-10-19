@@ -128,10 +128,10 @@ right answer.
 <summary>How this image was made</summary>
 
 ```bash
-# from the openfold-3 checkout, with QS pointing at a clone of this repo
-python3 $QS/scripts/render_figure.py plddt \
+# from the openfold-3 checkout, with render_figure.py copied into it
+pixi run -e openfold3-cuda12 python render_figure.py plddt \
     quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif \
-    $QS/assets/ubiquitin_cartoon.png --fit-to 1ubq.cif --rotate 60 --zoom 1.3 \
+    ubiquitin_cartoon.png --fit-to 1ubq.cif --rotate 60 --zoom 1.3 \
     --width 620 --canvas 1400x1100
 ```
 
@@ -1067,36 +1067,36 @@ render is about 430 KB with large margins; the committed versions are 24 to 164 
 It needs **biotite** (already in the pixi environment) plus **headless Chrome** and
 **ImageMagick**, which are not. It exits with a clear message if either is missing.
 
-Two checkouts are involved, so fix the paths before running anything. The predictions and the
-downloaded references live in `openfold-3`; the script and the figures live here:
+Everything below runs from the **`openfold-3` checkout**, where the predictions and the
+downloaded reference structures already are. Install the script into it once:
 
 ```bash
-git clone --depth 1 https://github.com/jianwen-xie/openfold3-quickstart.git
-QS=$PWD/openfold3-quickstart        # this repo
-
-cd /path/to/openfold-3              # run from here: that is where the predictions are
+git clone --depth 1 https://github.com/jianwen-xie/openfold3-quickstart.git /tmp/of3-qs
+cp /tmp/of3-qs/scripts/render_figure.py .
 ```
 
-Then every command below is `python3 $QS/scripts/render_figure.py …`, writing into
-`$QS/assets/`:
+Then render:
 
 ```bash
 # colour by the four pLDDT bands
-python3 $QS/scripts/render_figure.py plddt MODEL.cif $QS/assets/out.png --fit-to REF.cif
+pixi run -e openfold3-cuda12 python render_figure.py plddt MODEL.cif out.png --fit-to REF.cif
 
 # one colour per chain
-python3 $QS/scripts/render_figure.py chains MODEL.cif $QS/assets/out.png --sticks C
+pixi run -e openfold3-cuda12 python render_figure.py chains MODEL.cif out.png --sticks C
 
 # prediction superposed on a reference
-python3 $QS/scripts/render_figure.py super MODEL.cif REF.cif $QS/assets/out.png
+pixi run -e openfold3-cuda12 python render_figure.py super MODEL.cif REF.cif out.png
 ```
+
+Running it through `pixi run` is what supplies biotite. Chrome and ImageMagick have to be on
+your `PATH` already.
 
 Re-running a command reproduces the figure, not the file. The script standardises the margin
 and the palette step, while the committed assets were made over time with slightly different
-trims, so git will report the asset as modified even when the image is the same picture.
-Expect a pixel or two of height difference, not a different figure.
+trims, so a regenerated figure differs from the committed one by a pixel or two of height.
+Same picture, different bytes.
 
-The arguments behind each figure, all run from the `openfold-3` checkout as above:
+The arguments behind each figure, all run from `openfold-3` as above:
 
 | Figure | Command |
 |---|---|
