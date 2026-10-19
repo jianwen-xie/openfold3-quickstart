@@ -189,10 +189,15 @@ def nonpolymer(arr) -> list[str]:
 
 def style_super(sticks, ref_sticks, spheres, ligands=(), ref_ligands=(),
                 translucent=False):
-    op = ", opacity:0.82" if translucent else ""
+    # 3Dmol blends an opacity toward the white background, so a translucent cartoon comes
+    # out pale. Pre-darken both colours to land back near the opaque appearance.
+    if translucent:
+        op, ref_col, pred_col = ", opacity:0.80", "#8e8e8e", "#101f47"
+    else:
+        op, ref_col, pred_col = "", "#d4d4d4", "#27408B"
     out = [
-        f'v.setStyle({{model:0}}, {{cartoon:{{color:"#d4d4d4", thickness:0.28{op}}}}});',
-        f'v.setStyle({{model:1}}, {{cartoon:{{color:"#27408B", thickness:0.28{op}}}}});',
+        f'v.setStyle({{model:0}}, {{cartoon:{{color:"{ref_col}", thickness:0.28{op}}}}});',
+        f'v.setStyle({{model:1}}, {{cartoon:{{color:"{pred_col}", thickness:0.28{op}}}}});',
     ]
     # ligands are drawn as sticks because a cartoon omits them entirely
     for resn in ref_ligands:
