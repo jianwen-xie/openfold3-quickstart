@@ -186,7 +186,7 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py super \
 ```
 
 `--rotate 60` is the same angle as the confidence figure above, so the two can be read
-together. It prints the RMSD as it goes, which is the first row of the table below.
+together.
 
 </details>
 
