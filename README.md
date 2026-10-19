@@ -151,25 +151,15 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py plddt \
 ```
 
 Running it through `pixi run` is what supplies biotite. Chrome and ImageMagick have to be on
-your `PATH` already; the script exits with a clear message if either is missing. Re-running
-reproduces the figure but not the file: the margin is standardised here while the committed
-assets were trimmed slightly differently as they were made, so expect a pixel or two of
-difference.
+your `PATH` already; the script exits with a clear message if either is missing.
 
-Two things it handles that are easy to get wrong by hand.
+`--fit-to` renders the prediction **after superposing it on the reference**, so this figure and
+the superposition below look at the molecule from the same angle. Rendering the raw file gives
+the same colours in a different orientation, and the two figures become hard to compare.
 
-The four bands need a **colour function**, because 3Dmol has no selection syntax for B-factor
-ranges, and `py3Dmol` cannot pass a JavaScript function from Python. From Python the closest
-you get is a continuous ramp, which is not the same figure:
-
-```python
-view.setStyle({}, {"cartoon": {"colorscheme":
-    {"prop": "b", "gradient": "roygb", "min": 50, "max": 100}}})
-```
-
-And `--fit-to` renders the prediction **after superposing it on the reference**, so this figure
-and the superposition below look at the molecule from the same angle. Rendering the raw file
-gives the same colours in a different orientation, and the two figures become hard to compare.
+The four bands come from a JavaScript colour callback rather than `py3Dmol`, which cannot pass
+a function from Python; its nearest equivalent is a continuous rainbow ramp, which is a
+different figure.
 
 </details>
 
