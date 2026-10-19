@@ -175,6 +175,18 @@ than merely admired:
 
 Prediction in navy, crystal structure in grey.
 
+<details>
+<summary>How this figure was made</summary>
+
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py super \
+    quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif \
+    figures/1ubq.cif figures/ubiquitin_vs_1ubq.png \
+    --rotate 60 --zoom 1.3 --width 540 --canvas 1400x1100
+```
+
+</details>
+
 | Superposition | Cα RMSD |
 |---|---|
 | All 76 residues | 0.73 Å |
@@ -185,10 +197,10 @@ exactly the region pLDDT marked as uncertain. The confidence estimate predicted 
 would be before any reference was consulted.
 
 <details>
-<summary>How to score a prediction against a reference</summary>
+<summary>How these numbers were made</summary>
 
-The same script has a `score` mode, which superposes and reports the RMSD without rendering
-anything, so it needs neither Chrome nor ImageMagick:
+`score` mode superposes and reports the RMSD without rendering anything, so it needs neither
+Chrome nor ImageMagick:
 
 ```bash
 pixi run -e openfold3-cuda12 python figures/render_figure.py score \
@@ -203,15 +215,6 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py score \
 
 `--residues` is what produces the second row: each range is superposed on its own, so it
 measures that region's accuracy rather than its placement within the whole.
-
-`super` does the same superposition and draws it, which is the figure above:
-
-```bash
-pixi run -e openfold3-cuda12 python figures/render_figure.py super \
-    quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif \
-    figures/1ubq.cif figures/ubiquitin_vs_1ubq.png \
-    --rotate 60 --zoom 1.3 --width 540 --canvas 1400x1100
-```
 
 Residues are paired between the two structures by **identical residue name**, not by residue
 id. Ubiquitin happens to number one to one, so it would not matter here, but the complexes
@@ -350,6 +353,20 @@ orange (`B`, `D`). Each small α subunit packs against its own β partner, and t
 heterodimers meet through a β–β interface in the middle. Getting this right means getting four
 chains and three distinct interfaces right at once.
 
+<details>
+<summary>How this figure was made</summary>
+
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py chains quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif \
+    figures/psd_chains.png --rotate 20 --tilt 10 --zoom 1.10 --width 640 --canvas 1050x1200 \
+    --colour 'A:#27408B' --colour 'C:#7FB2E5' --colour 'B:#C2461E' --colour 'D:#F0A33C'
+```
+
+The `--colour` pins give the two β subunits one hue and the two α subunits another, so each
+pair reads as a pair rather than as four unrelated chains.
+
+</details>
+
 <p align="center">
   <img src="assets/psd_vs_7cnx.png" alt="Predicted assembly superposed on the 7CNX crystal structure" width="320">
 </p>
@@ -357,6 +374,20 @@ chains and three distinct interfaces right at once.
 Prediction in navy, crystal structure in grey, same orientation as above. The colours no
 longer identify chains as they did in the previous figure; here they separate the prediction
 from the experiment.
+
+<details>
+<summary>How this figure was made</summary>
+
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py super  quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif \
+    figures/7cnx.cif figures/psd_vs_7cnx.png --ref-chains A,B,C,D \
+    --rotate 20 --tilt 10 --zoom 1.10 --width 640 --canvas 1050x1200
+```
+
+`--ref-chains A,B,C,D` picks the matching copy of the tetramer: 7CNX holds two in its
+asymmetric unit. It reports 0.57 Å over 557 atoms, the first row of the table below.
+
+</details>
 
 | Superposition | Cα RMSD |
 |---|---|
@@ -424,22 +455,6 @@ every atom so both figures end up in the same frame:
 fitted, transform = struc.superimpose(ref_coords, pred_coords)
 pred_fit = transform.apply(pred_full)
 ```
-
-`render_figure.py` does all of that, including the offsets. Both figures, with
-`--ref-chains A,B,C,D` selecting the matching copy of the tetramer:
-
-```bash
-render_figure.py chains quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif \
-    figures/psd_chains.png --rotate 20 --tilt 10 --zoom 1.10 --width 640 --canvas 1050x1200 \
-    --colour 'A:#27408B' --colour 'C:#7FB2E5' --colour 'B:#C2461E' --colour 'D:#F0A33C'
-
-render_figure.py super  quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif \
-    figures/7cnx.cif figures/psd_vs_7cnx.png --ref-chains A,B,C,D \
-    --rotate 20 --tilt 10 --zoom 1.10 --width 640 --canvas 1050x1200
-```
-
-The second reports 0.57 Å over 557 atoms, the number in the table. The `--colour` pins give
-the two β subunits one hue and the two α subunits another, so each pair reads as a pair.
 
 </details>
 
@@ -790,6 +805,21 @@ One colour per protein: the **heavy chain in blue**, **β2-microglobulin in oran
 formed by the heavy chain's two long helices and β2-microglobulin tucked underneath as the
 support subunit.
 
+<details>
+<summary>How this figure was made</summary>
+
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py chains \\
+    demo_mhc/mhc_class_i/seed_42/mhc_class_i_seed_42_sample_1_model.cif \\
+    figures/demo_mhc_chains.png --rotate 70 --zoom 0.98 --sticks C --width 440 \\
+    --canvas 1200x1000
+```
+
+`--sticks C` is needed because a nine-residue chain has no secondary structure for a cartoon
+to trace, and would otherwise not be drawn at all.
+
+</details>
+
 <p align="center">
   <img src="assets/demo_mhc_vs_1duz.png" alt="Predicted complex superposed on 1DUZ" width="400">
 </p>
@@ -797,6 +827,25 @@ support subunit.
 **The colours change meaning between these two figures.** Above, a colour identifies the
 molecule. Here it identifies the structure: everything predicted is blue, everything from the
 1DUZ crystal is grey.
+
+<details>
+<summary>How this figure was made</summary>
+
+```bash
+curl -o figures/1duz.cif https://files.rcsb.org/download/1DUZ.cif
+
+pixi run -e openfold3-cuda12 python figures/render_figure.py super \\
+    demo_mhc/mhc_class_i/seed_42/mhc_class_i_seed_42_sample_1_model.cif figures/1duz.cif \\
+    figures/demo_mhc_vs_1duz.png --rotate 70 --zoom 0.98 \\
+    --sticks C --ref-sticks F --ref-chains D,E,F --width 420
+```
+
+`--ref-chains D,E,F` picks which copy of the complex to score against and drops the other
+from the picture. 1DUZ holds two; without the flag the prediction aligns to whichever shares
+its chain ids, the second is drawn unaligned in the corner, and the RMSD reads 0.63 Å rather
+than 0.67 Å.
+
+</details>
 
 Both peptides are in the groove, one inside the other. The crystal's is drawn as thick dark
 sticks and the predicted one as thinner pale blue sticks on top, because at this accuracy the
@@ -859,6 +908,21 @@ One colour per component: the **protein in blue**, the **two DNA strands in dark
 orange**, sharing a hue because they are one duplex, and the **three zinc ions as green
 spheres**. Each finger sits in the major groove and carries its own zinc.
 
+<details>
+<summary>How this figure was made</summary>
+
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py chains \\
+    demo_zif/zif268_dna/seed_42/zif268_dna_seed_42_sample_1_model.cif \\
+    figures/demo_zif_chains.png --rotate 60 --zoom 0.98 --spheres ZN --width 470 \\
+    --colour 'B:#eb6834' --colour 'C:#f6b08c' --colour 'ZN:#1baf7a'
+```
+
+The `--colour` pins give the two DNA strands one hue, so they read as a duplex rather than as
+two unrelated chains, which is what the default palette would do.
+
+</details>
+
 <p align="center">
   <img src="assets/demo_zif_vs_1aay.png" alt="Predicted complex superposed on 1AAY" width="430">
 </p>
@@ -866,6 +930,23 @@ spheres**. Each finger sits in the major groove and carries its own zinc.
 Prediction in navy, 1AAY crystal structure in grey; colours here separate prediction from
 experiment, not component from component. The crystal's zinc ions are drawn as large
 translucent spheres with the predicted ones solid inside them.
+
+<details>
+<summary>How this figure was made</summary>
+
+```bash
+curl -o figures/1aay.cif https://files.rcsb.org/download/1AAY.cif
+
+pixi run -e openfold3-cuda12 python figures/render_figure.py super \\
+    demo_zif/zif268_dna/seed_42/zif268_dna_seed_42_sample_1_model.cif figures/1aay.cif \\
+    figures/demo_zif_vs_1aay.png --rotate 60 --zoom 0.98 --spheres ZN \\
+    --width 430 --canvas 1250x1000
+```
+
+`--spheres ZN` draws the crystal's ions large and translucent with the predicted ones solid
+inside, because an opaque sphere hides an ion sitting a quarter of an ångström within it.
+
+</details>
 
 | Superposition | RMSD |
 |---|---|
@@ -920,6 +1001,18 @@ The predicted complex, one colour per chain: **MDM2 in blue**, the **cyclic pept
 orange**. The peptide lies across the shallow groove on the near face, which is where p53
 binds.
 
+<details>
+<summary>How this figure was made</summary>
+
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py chains \\
+    demo_mdm2/mdm2/seed_42/mdm2_seed_42_sample_1_model.cif \\
+    figures/demo_mdm2_chains.png --rotate 45 --zoom 1.30 --sticks B \\
+    --width 480 --canvas 1100x950
+```
+
+</details>
+
 Superposed on the crystal structure:
 
 <p align="center">
@@ -971,6 +1064,21 @@ pixi run -e openfold3-cuda12 run_openfold predict \
 The predicted complex, one colour per component: the **protein in blue**, drawn translucent
 because the site is buried, the **ligand in orange**, and the **eight residues named in the
 constraint in green**. The ligand sits among them, which is what the constraint asked for.
+
+<details>
+<summary>How this figure was made</summary>
+
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py chains \\
+    demo_bla/bla_1PZP_FTA/seed_42/bla_1PZP_FTA_seed_42_sample_1_model.cif \\
+    figures/demo_bla_chains.png --rotate 60 --zoom 1.30 --translucent \\
+    --width 680 --canvas 1200x980
+```
+
+`--translucent` drops the cartoon's opacity, without which the buried ligand is hidden
+entirely.
+
+</details>
 
 To see what that buys, the same query was run again with the `pocket_constraint` block deleted
 and nothing else changed.
@@ -1066,50 +1174,6 @@ looked like a missing component when it was really an accurate one.
 
 1PZP contains two copies of FTA, 17.9 Å apart. The centroid distances quoted are to the nearer
 copy, and both copies appear in the figure.
-
-**The commands.** With `render_figure.py` in the `openfold-3` checkout as in the first
-example, and the two references fetched the same way:
-
-```bash
-curl -o figures/1duz.cif https://files.rcsb.org/download/1DUZ.cif
-curl -o figures/1aay.cif https://files.rcsb.org/download/1AAY.cif
-```
-
-Each command below is prefixed by `pixi run -e openfold3-cuda12 python figures/`:
-
-```bash
-render_figure.py chains demo_mhc/.../sample_1_model.cif figures/demo_mhc_chains.png \
-    --rotate 70 --zoom 0.98 --sticks C --width 440 --canvas 1200x1000
-
-render_figure.py super  demo_mhc/.../sample_1_model.cif figures/1duz.cif \
-    figures/demo_mhc_vs_1duz.png \
-    --rotate 70 --zoom 0.98 --sticks C --ref-sticks F --ref-chains D,E,F --width 420
-
-render_figure.py chains demo_zif/.../sample_1_model.cif figures/demo_zif_chains.png \
-    --rotate 60 --zoom 0.98 --spheres ZN --width 470 \
-    --colour 'B:#eb6834' --colour 'C:#f6b08c' --colour 'ZN:#1baf7a'
-
-render_figure.py super  demo_zif/.../sample_1_model.cif figures/1aay.cif \
-    figures/demo_zif_vs_1aay.png \
-    --rotate 60 --zoom 0.98 --spheres ZN --width 430 --canvas 1250x1000
-```
-
-Three of those flags exist because of the traps above. `--ref-chains` picks which copy of a
-complex to score against and drops the others from the picture: without it the prediction
-aligns to whichever 1DUZ copy shares its chain ids, the second copy is drawn unaligned in the
-corner, and the RMSD reads 0.63 Å rather than 0.67 Å. `--sticks` and `--spheres` force a
-representation where a cartoon draws nothing. `--colour` pins a chain, so the two strands of
-one duplex share a hue instead of being handed separate ones by the default palette.
-
-The two remaining identity figures:
-
-```bash
-render_figure.py chains demo_mdm2/.../sample_1_model.cif figures/demo_mdm2_chains.png \
-    --rotate 45 --zoom 1.30 --sticks B --width 480 --canvas 1100x950
-
-render_figure.py chains demo_bla/.../sample_1_model.cif figures/demo_bla_chains.png \
-    --rotate 60 --zoom 1.30 --translucent --width 680 --canvas 1200x980
-```
 
 Three figures are hand-made and not reproducible from the script: the two-panel lysozyme
 close-up, the three-structure β-lactamase overlay, and the MDM2 superposition, which keeps the
