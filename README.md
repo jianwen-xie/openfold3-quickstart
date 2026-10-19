@@ -254,10 +254,11 @@ right pose, so the figure to look at is the superposition:
   <img src="assets/lysozyme_toluene.png" alt="Predicted lysozyme-toluene complex superposed on 7L39" width="560">
 </p>
 
-Prediction in navy, crystal structure in grey. **Left:** the whole complex. **Right:** the
-cavity close up, where the **blue ring is the predicted ligand** and the **black ring beneath
-it the crystallographic one**. The protein is translucent because the cavity is buried, and
-the faint grey sticks are the side chains lining it.
+Prediction in navy, crystal structure in grey, both drawn translucent because the binding
+cavity is buried and an opaque ribbon would hide what is in it. **Left:** the whole complex,
+with the ligand visible through the fold. **Right:** the cavity close up, where the **blue
+ring is the predicted ligand** and the **black ring beneath it the crystallographic one**,
+with the pocket's side chains in grey.
 
 | Superposition | Deviation |
 |---|---|
@@ -279,7 +280,8 @@ the protein translucent with the pocket's side chains around it:
 ```bash
 pixi run -e openfold3-cuda12 python figures/render_figure.py super \
     quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif figures/7l39.cif \
-    figures/lyso_left.png --rotate 0 --zoom 1.2 --width 420 --canvas 1000x1000
+    figures/lyso_left.png --ref-ligand MBN --translucent \
+    --rotate 0 --zoom 1.2 --width 420 --canvas 1000x1000
 
 pixi run -e openfold3-cuda12 python figures/render_figure.py super \
     quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif figures/7l39.cif \
@@ -289,9 +291,12 @@ convert figures/lyso_left.png figures/lyso_right.png +append \
     -resize 846x -colors 256 -strip figures/lysozyme_toluene.png
 ```
 
-`--focus-ref MBN` is needed because the two files name the same molecule differently: the
-prediction calls it `LIG0` and the crystal calls it `MBN`. Without the translucency the
-cavity is buried and an opaque ribbon hides the ligand completely.
+Both panels name the crystal's copy of the ligand explicitly, as `--ref-ligand` or
+`--focus-ref`, because the two files call the same molecule different things: `LIG0` in the
+prediction, `MBN` in the crystal.
+
+Both are also translucent, for the same reason. The cavity is buried, so an opaque ribbon
+hides the ligand completely, in the whole-complex view as much as in the close-up.
 
 </details>
 

@@ -180,11 +180,27 @@ def style_focus(pred_resn: str, ref_resn: str, radius: float) -> str:
     ])
 
 
-def style_super(sticks, ref_sticks, spheres):
+def nonpolymer(arr) -> list[str]:
+    """Residue names a cartoon cannot draw: ligands, ions, anything not a chain backbone.
+    Left to a cartoon alone they are simply absent from the figure."""
+    other = arr[~struc.filter_amino_acids(arr) & ~struc.filter_nucleotides(arr)]
+    return sorted({r for r in other.res_name.tolist() if r != "HOH"})
+
+
+def style_super(sticks, ref_sticks, spheres, ligands=(), ref_ligands=(),
+                translucent=False):
+    op = ", opacity:0.82" if translucent else ""
     out = [
-        'v.setStyle({model:0}, {cartoon:{color:"#d4d4d4", thickness:0.28}});',
-        'v.setStyle({model:1}, {cartoon:{color:"#27408B", thickness:0.28}});',
+        f'v.setStyle({{model:0}}, {{cartoon:{{color:"#d4d4d4", thickness:0.28{op}}}}});',
+        f'v.setStyle({{model:1}}, {{cartoon:{{color:"#27408B", thickness:0.28{op}}}}});',
     ]
+    # ligands are drawn as sticks because a cartoon omits them entirely
+    for resn in ref_ligands:
+        out.append(f'v.setStyle({{model:0, resn:"{resn}"}}, '
+                   f'{{stick:{{radius:0.26, color:"#333333"}}}});')
+    for resn in ligands:
+        out.append(f'v.setStyle({{model:1, resn:"{resn}"}}, '
+                   f'{{stick:{{radius:0.26, color:"#2a78d6"}}}});')
     # A short chain has no secondary structure for a cartoon to trace and draws as
     # nothing; the crystal copy goes on thick so the prediction reads on top of it.
     for ch in ref_sticks:
@@ -259,11 +275,15 @@ def main():
     ap.add_argument("--spheres", action="append", default=[],
                     help="draw this residue name as spheres, e.g. ZN")
     ap.add_argument("--translucent", action="store_true",
-                    help="chains mode: drop the cartoon's opacity so a buried ligand shows")
+                    help="drop the cartoon's opacity so a buried ligand shows through it")
     ap.add_argument("--colour", action="append", default=[], metavar="KEY:HEX",
                     help="pin a chain id or residue name to a colour, e.g. --colour C:#f6b08c. "
                          "Repeatable. Use it to give two strands of one duplex the same hue so "
                          "they read as a pair rather than as unrelated chains.")
+    ap.add_argument("--ref-ligand", metavar="RESN",
+                    help="super mode: the reference's name for the ligand, when it differs from "
+                         "the prediction's. A crystal often calls it something else, and a "
+                         "cartoon draws neither, so without this only the predicted one appears.")
     ap.add_argument("--focus", metavar="RESN",
                     help="super mode: close up on this residue name, e.g. LIG0 for a predicted "
                          "ligand. Draws the protein translucent and the pocket's side chains, "
@@ -330,7 +350,13 @@ def main():
         if a.focus:
             style = style_focus(a.focus, a.focus_ref or a.focus, a.focus_radius)
         else:
-            style = style_super(a.sticks, a.ref_sticks, a.spheres)
+            # anything a cartoon cannot draw, drawn as sticks so it is not silently missing
+            ligs = nonpolymer(pred)
+            ref_ligs = [a.ref_ligand] if a.ref_ligand else []
+            if ligs or ref_ligs:
+                print(f"  drawing as sticks: prediction {ligs or '-'}, reference {ref_ligs or '-'}")
+            style = style_super(a.sticks, a.ref_sticks, a.spheres, ligs, ref_ligs,
+                                a.translucent)
     else:
         if a.fit_to:
             ref = load(a.fit_to)
