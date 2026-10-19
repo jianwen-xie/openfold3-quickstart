@@ -128,26 +128,35 @@ right answer.
 <summary>How this image was made</summary>
 
 `scripts/render_figure.py` in this repo does the whole job: superpose, render through
-headless Chrome, then trim and scale to a size that belongs in a README. Copy it into your
-`openfold-3` checkout once, and every path below is relative to the directory you are already
-standing in:
+headless Chrome, then trim and scale to a size that belongs in a README.
+
+Set it up once inside your `openfold-3` checkout. Keeping the script, the reference structures
+and the output in a single `figures/` directory leaves one untracked entry in that repository
+rather than a scatter of loose files, and anything scored against an experimental structure
+needs that structure too. RCSB serves them under an uppercase id, so name the download
+explicitly with `-o`:
 
 ```bash
+mkdir -p figures && cd figures
 curl -O https://raw.githubusercontent.com/jianwen-xie/openfold3-quickstart/main/scripts/render_figure.py
-```
-
-Anything scored against an experimental structure also needs that structure. RCSB serves them
-under an uppercase id, so name the output explicitly rather than using `curl -O`:
-
-```bash
 curl -o 1ubq.cif https://files.rcsb.org/download/1UBQ.cif
+cd ..
 ```
 
+Then render, from the root of the `openfold-3` checkout:
+
 ```bash
-pixi run -e openfold3-cuda12 python render_figure.py plddt \
+pixi run -e openfold3-cuda12 python figures/render_figure.py plddt \
     quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif \
-    ubiquitin_cartoon.png --fit-to 1ubq.cif --rotate 60 --zoom 1.3 \
+    figures/ubiquitin_cartoon.png --fit-to figures/1ubq.cif --rotate 60 --zoom 1.3 \
     --width 620 --canvas 1400x1100
+```
+
+`openfold-3` is someone else's repository, so if the directory bothers you, hide it from git
+without touching their `.gitignore`:
+
+```bash
+echo "figures/" >> .git/info/exclude
 ```
 
 Running it through `pixi run` is what supplies biotite. Chrome and ImageMagick have to be on
@@ -1077,24 +1086,26 @@ copy, and both copies appear in the figure.
 example, and the two references fetched the same way:
 
 ```bash
-curl -o 1duz.cif https://files.rcsb.org/download/1DUZ.cif
-curl -o 1aay.cif https://files.rcsb.org/download/1AAY.cif
+curl -o figures/1duz.cif https://files.rcsb.org/download/1DUZ.cif
+curl -o figures/1aay.cif https://files.rcsb.org/download/1AAY.cif
 ```
 
-Each command below is prefixed by `pixi run -e openfold3-cuda12 python`:
+Each command below is prefixed by `pixi run -e openfold3-cuda12 python figures/`:
 
 ```bash
-render_figure.py chains demo_mhc/.../sample_1_model.cif demo_mhc_chains.png \
+render_figure.py chains demo_mhc/.../sample_1_model.cif figures/demo_mhc_chains.png \
     --rotate 70 --zoom 0.98 --sticks C --width 440 --canvas 1200x1000
 
-render_figure.py super  demo_mhc/.../sample_1_model.cif 1duz.cif demo_mhc_vs_1duz.png \
+render_figure.py super  demo_mhc/.../sample_1_model.cif figures/1duz.cif \
+    figures/demo_mhc_vs_1duz.png \
     --rotate 70 --zoom 0.98 --sticks C --ref-sticks F --ref-chains D,E,F --width 420
 
-render_figure.py chains demo_zif/.../sample_1_model.cif demo_zif_chains.png \
+render_figure.py chains demo_zif/.../sample_1_model.cif figures/demo_zif_chains.png \
     --rotate 60 --zoom 0.98 --spheres ZN --width 470 \
     --colour 'B:#eb6834' --colour 'C:#f6b08c' --colour 'ZN:#1baf7a'
 
-render_figure.py super  demo_zif/.../sample_1_model.cif 1aay.cif demo_zif_vs_1aay.png \
+render_figure.py super  demo_zif/.../sample_1_model.cif figures/1aay.cif \
+    figures/demo_zif_vs_1aay.png \
     --rotate 60 --zoom 0.98 --spheres ZN --width 430 --canvas 1250x1000
 ```
 
