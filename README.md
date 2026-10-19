@@ -807,9 +807,9 @@ support subunit.
 <summary>How this figure was made</summary>
 
 ```bash
-pixi run -e openfold3-cuda12 python figures/render_figure.py chains \\
-    demo_mhc/mhc_class_i/seed_42/mhc_class_i_seed_42_sample_1_model.cif \\
-    figures/demo_mhc_chains.png --rotate 70 --zoom 0.98 --sticks C --width 440 \\
+pixi run -e openfold3-cuda12 python figures/render_figure.py chains \
+    demo_mhc/mhc_class_i/seed_42/mhc_class_i_seed_42_sample_1_model.cif \
+    figures/demo_mhc_chains.png --rotate 70 --zoom 0.98 --sticks C --width 440 \
     --canvas 1200x1000
 ```
 
@@ -832,9 +832,9 @@ molecule. Here it identifies the structure: everything predicted is blue, everyt
 ```bash
 curl -o figures/1duz.cif https://files.rcsb.org/download/1DUZ.cif
 
-pixi run -e openfold3-cuda12 python figures/render_figure.py super \\
-    demo_mhc/mhc_class_i/seed_42/mhc_class_i_seed_42_sample_1_model.cif figures/1duz.cif \\
-    figures/demo_mhc_vs_1duz.png --rotate 70 --zoom 0.98 \\
+pixi run -e openfold3-cuda12 python figures/render_figure.py super \
+    demo_mhc/mhc_class_i/seed_42/mhc_class_i_seed_42_sample_1_model.cif figures/1duz.cif \
+    figures/demo_mhc_vs_1duz.png --rotate 70 --zoom 0.98 \
     --sticks C --ref-sticks F --ref-chains D,E,F --width 420
 ```
 
@@ -910,9 +910,9 @@ spheres**. Each finger sits in the major groove and carries its own zinc.
 <summary>How this figure was made</summary>
 
 ```bash
-pixi run -e openfold3-cuda12 python figures/render_figure.py chains \\
-    demo_zif/zif268_dna/seed_42/zif268_dna_seed_42_sample_1_model.cif \\
-    figures/demo_zif_chains.png --rotate 60 --zoom 0.98 --spheres ZN --width 470 \\
+pixi run -e openfold3-cuda12 python figures/render_figure.py chains \
+    demo_zif/zif268_dna/seed_42/zif268_dna_seed_42_sample_1_model.cif \
+    figures/demo_zif_chains.png --rotate 60 --zoom 0.98 --spheres ZN --width 470 \
     --colour 'B:#eb6834' --colour 'C:#f6b08c' --colour 'ZN:#1baf7a'
 ```
 
@@ -935,9 +935,9 @@ translucent spheres with the predicted ones solid inside them.
 ```bash
 curl -o figures/1aay.cif https://files.rcsb.org/download/1AAY.cif
 
-pixi run -e openfold3-cuda12 python figures/render_figure.py super \\
-    demo_zif/zif268_dna/seed_42/zif268_dna_seed_42_sample_1_model.cif figures/1aay.cif \\
-    figures/demo_zif_vs_1aay.png --rotate 60 --zoom 0.98 --spheres ZN \\
+pixi run -e openfold3-cuda12 python figures/render_figure.py super \
+    demo_zif/zif268_dna/seed_42/zif268_dna_seed_42_sample_1_model.cif figures/1aay.cif \
+    figures/demo_zif_vs_1aay.png --rotate 60 --zoom 0.98 --spheres ZN \
     --width 430 --canvas 1250x1000
 ```
 
@@ -1003,11 +1003,13 @@ binds.
 <summary>How this figure was made</summary>
 
 ```bash
-pixi run -e openfold3-cuda12 python figures/render_figure.py chains \\
-    demo_mdm2/mdm2/seed_42/mdm2_seed_42_sample_1_model.cif \\
-    figures/demo_mdm2_chains.png --rotate 45 --zoom 1.30 --sticks B \\
+pixi run -e openfold3-cuda12 python figures/render_figure.py chains \
+    demo_mdm2/mdm2/seed_42/mdm2_seed_42_sample_1_model.cif \
+    figures/demo_mdm2_chains.png --rotate 45 --zoom 1.30 --sticks B \
     --width 480 --canvas 1100x950
 ```
+
+`--sticks B` draws the ten-residue cyclic peptide, which is too short for a cartoon to trace.
 
 </details>
 
@@ -1067,9 +1069,9 @@ constraint in green**. The ligand sits among them, which is what the constraint 
 <summary>How this figure was made</summary>
 
 ```bash
-pixi run -e openfold3-cuda12 python figures/render_figure.py chains \\
-    demo_bla/bla_1PZP_FTA/seed_42/bla_1PZP_FTA_seed_42_sample_1_model.cif \\
-    figures/demo_bla_chains.png --rotate 60 --zoom 1.30 --translucent \\
+pixi run -e openfold3-cuda12 python figures/render_figure.py chains \
+    demo_bla/bla_1PZP_FTA/seed_42/bla_1PZP_FTA_seed_42_sample_1_model.cif \
+    figures/demo_bla_chains.png --rotate 60 --zoom 1.30 --translucent \
     --width 680 --canvas 1200x980
 ```
 
