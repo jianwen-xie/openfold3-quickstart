@@ -204,6 +204,15 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py score \
 `--residues` is what produces the second row: each range is superposed on its own, so it
 measures that region's accuracy rather than its placement within the whole.
 
+`super` does the same superposition and draws it, which is the figure above:
+
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py super \
+    quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif \
+    figures/1ubq.cif figures/ubiquitin_vs_1ubq.png \
+    --rotate 60 --zoom 1.3 --width 540 --canvas 1400x1100
+```
+
 Residues are paired between the two structures by **identical residue name**, not by residue
 id. Ubiquitin happens to number one to one, so it would not matter here, but the complexes
 further down renumber their chains and matching on id alone silently drops or misaligns them.
@@ -416,16 +425,21 @@ fitted, transform = struc.superimpose(ref_coords, pred_coords)
 pred_fit = transform.apply(pred_full)
 ```
 
-Render as before. The chain figure needs no colour function, just one colour per selection:
+`render_figure.py` does all of that, including the offsets. Both figures, with
+`--ref-chains A,B,C,D` selecting the matching copy of the tetramer:
 
-```js
-v.setStyle({chain: "A"}, {cartoon: {color: "#27408B", thickness: 0.30}});
-v.setStyle({chain: "C"}, {cartoon: {color: "#7FB2E5", thickness: 0.30}});
-v.setStyle({chain: "B"}, {cartoon: {color: "#C2461E", thickness: 0.42}});
-v.setStyle({chain: "D"}, {cartoon: {color: "#F0A33C", thickness: 0.42}});
+```bash
+render_figure.py chains quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif \
+    figures/psd_chains.png --rotate 20 --tilt 10 --zoom 1.10 --width 640 --canvas 1050x1200 \
+    --colour 'A:#27408B' --colour 'C:#7FB2E5' --colour 'B:#C2461E' --colour 'D:#F0A33C'
+
+render_figure.py super  quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif \
+    figures/7cnx.cif figures/psd_vs_7cnx.png --ref-chains A,B,C,D \
+    --rotate 20 --tilt 10 --zoom 1.10 --width 640 --canvas 1050x1200
 ```
 
-The α subunits are drawn thicker so a 42-residue chain stays visible next to a 253-residue one.
+The second reports 0.57 Å over 557 atoms, the number in the table. The `--colour` pins give
+the two β subunits one hue and the two α subunits another, so each pair reads as a pair.
 
 </details>
 
@@ -1087,8 +1101,20 @@ corner, and the RMSD reads 0.63 Å rather than 0.67 Å. `--sticks` and `--sphere
 representation where a cartoon draws nothing. `--colour` pins a chain, so the two strands of
 one duplex share a hue instead of being handed separate ones by the default palette.
 
-The two-panel lysozyme close-up and the three-structure β-lactamase overlay are not covered by
-the script; their code stays inline in the sections above.
+The two remaining identity figures:
+
+```bash
+render_figure.py chains demo_mdm2/.../sample_1_model.cif figures/demo_mdm2_chains.png \
+    --rotate 45 --zoom 1.30 --sticks B --width 480 --canvas 1100x950
+
+render_figure.py chains demo_bla/.../sample_1_model.cif figures/demo_bla_chains.png \
+    --rotate 60 --zoom 1.30 --translucent --width 680 --canvas 1200x980
+```
+
+Three figures are hand-made and not reproducible from the script: the two-panel lysozyme
+close-up, the three-structure β-lactamase overlay, and the MDM2 superposition, which keeps the
+peptide's own colour instead of folding it into the prediction colour and scores the domain
+alone rather than the complex. Their code stays inline in the sections above.
 
 </details>
 
