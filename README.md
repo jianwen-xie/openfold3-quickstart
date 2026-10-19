@@ -185,6 +185,9 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py super \
     --rotate 60 --zoom 1.3 --width 540 --canvas 1400x1100
 ```
 
+`--rotate 60` is the same angle as the confidence figure above, so the two can be read
+together. It prints the RMSD as it goes, which is the first row of the table below.
+
 </details>
 
 | Superposition | Cα RMSD |
@@ -199,8 +202,7 @@ would be before any reference was consulted.
 <details>
 <summary>How these numbers were made</summary>
 
-`score` mode superposes and reports the RMSD without rendering anything, so it needs neither
-Chrome nor ImageMagick:
+`score` reports the RMSD without rendering, so it needs neither Chrome nor ImageMagick:
 
 ```bash
 pixi run -e openfold3-cuda12 python figures/render_figure.py score \
@@ -213,12 +215,8 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py score \
   residues 1-72           0.44 A  over 72
 ```
 
-`--residues` is what produces the second row: each range is superposed on its own, so it
-measures that region's accuracy rather than its placement within the whole.
-
-Residues are paired between the two structures by **identical residue name**, not by residue
-id. Ubiquitin happens to number one to one, so it would not matter here, but the complexes
-further down renumber their chains and matching on id alone silently drops or misaligns them.
+`--residues` produces the second row: each range is superposed on its own, so it measures that
+region's accuracy rather than its placement in the whole.
 
 </details>
 
