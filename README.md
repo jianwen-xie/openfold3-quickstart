@@ -224,10 +224,8 @@ Timing per stage is written to `timing.json` in the same directory.
 
 #### (2) A protein with a ligand
 
-Ubiquitin is a single chain, the easy case, and the one AlphaFold2 already handled. What
-AlphaFold3-style models add is **co-folding**: predicting a structure and its partners
-together. The simplest version of that is one protein plus one small molecule. The repo ships
-an example that does this, and whose name is the PDB entry it reproduces:
+The simplest co-folding case: one protein and one small molecule. The repo ships an example,
+named after the PDB entry it reproduces:
 
 ```bash
 pixi run -e openfold3-cuda12 run_openfold predict \
@@ -236,12 +234,10 @@ pixi run -e openfold3-cuda12 run_openfold predict \
     --output-dir ./quickstart_cofold
 ```
 
-The output layout, the five samples and the ranking step are all as described above. Only
-what differs is shown here.
-
-The query is T4 lysozyme L99A (164 residues) plus toluene, given as SMILES (`Cc1ccccc1`) rather
-than a sequence. The reference is [7L39](https://www.rcsb.org/structure/7L39) at 1.35 Å, the
-classic model system for ligand binding in a buried hydrophobic cavity.
+The query is T4 lysozyme L99A (164 residues) plus toluene, given as SMILES (`Cc1ccccc1`)
+rather than a sequence. The reference is [7L39](https://www.rcsb.org/structure/7L39) at
+1.35 Å, the classic model system for ligand binding in a buried hydrophobic cavity. The output
+layout, the five samples and the ranking step are all as described above.
 
 Confidence is not the interesting question here: lysozyme folds correctly either way, and
 96.3% of atoms score ≥ 90. What matters is whether the ligand found the right pocket in the
@@ -251,14 +247,10 @@ right pose, so the figure to look at is the superposition:
   <img src="assets/lysozyme_toluene.png" alt="Predicted lysozyme-toluene complex superposed on 7L39" width="560">
 </p>
 
-Prediction in navy, crystal structure in grey.
-
-**Left:** the whole complex superposed. **Right:** a close-up of the binding cavity, looking at
-the toluene itself. The **blue ring is the predicted ligand** and the **black ring directly
-beneath it is the crystallographic one**. They overlap almost exactly, which is the 0.33 Å in
-the table below. The faint grey sticks are the side chains lining the pocket, and the protein
-is drawn at 30% opacity because the cavity is buried and an opaque ribbon would hide the
-ligand entirely.
+Prediction in navy, crystal structure in grey. **Left:** the whole complex. **Right:** the
+cavity close up, where the **blue ring is the predicted ligand** and the **black ring beneath
+it the crystallographic one**. The protein is translucent because the cavity is buried, and
+the faint grey sticks are the side chains lining it.
 
 | Superposition | Deviation |
 |---|---|
@@ -267,10 +259,9 @@ ligand entirely.
 
 The ligand found the right pocket in the right pose, to within a third of an ångström.
 
-Overall the run scores `avg_plddt` 97.8, `ptm` 0.98 and `iptm` 0.94. That last number is
-finally meaningful here. It read `0.0` for ubiquitin because a single chain has no interface;
-here it scores the protein–ligand interface. For anything with more than one component, `iptm` is the
-number to watch, not `ptm`.
+`iptm` is finally meaningful here, scoring 0.94 alongside `avg_plddt` 97.8 and `ptm` 0.98. It
+read `0.0` for ubiquitin, where a single chain has no interface to score. For anything with
+more than one component it is the number to watch, not `ptm`.
 
 <details>
 <summary>How this image was made</summary>
