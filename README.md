@@ -289,7 +289,9 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py super \
     quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif figures/7l39.cif \
     figures/lyso_right.png --focus LIG0 --focus-ref MBN --zoom 0.62 --width 420 --canvas 1000x1000
 
-convert figures/lyso_left.png figures/lyso_right.png \
+convert \
+    \( figures/lyso_left.png  -background white -gravity east -splice 30x0 \) \
+    \( figures/lyso_right.png -background white -gravity west -splice 30x0 \) \
     -background white -gravity center +append \
     -resize 846x -colors 256 -strip figures/lysozyme_toluene.png
 ```
@@ -298,9 +300,11 @@ Both panels name the crystal's copy of the ligand explicitly, as `--ref-ligand` 
 `--focus-ref`, because the two files call the same molecule different things: `LIG0` in the
 prediction, `MBN` in the crystal. Without naming it, only the predicted copy is drawn.
 
-`-gravity center` on the montage matters: the two renders are trimmed to their own content
-and come out different heights, so a plain `+append` aligns their tops and leaves the frames
-ending at different levels.
+Two details in the montage. `-gravity center` pads the shorter render to the taller one's
+height, because each is trimmed to its own content and a plain `+append` would align their
+tops and leave the frames ending at different levels. The `\( … \)` groups put a 30px gap
+between the panels by padding only their inner edges; applied ungrouped, `-splice` runs
+against every image in the sequence and slices both panels apart.
 
 Only the close-up is translucent. Transparency is the only way to see into a buried cavity,
 but 3Dmol blends it toward the white background, which costs the navy-against-grey contrast
