@@ -187,30 +187,26 @@ would be before any reference was consulted.
 <details>
 <summary>How to score a prediction against a reference</summary>
 
-```python
-import biotite.structure as struc
-import biotite.structure.io.pdbx as pdbx
+The same script has a `score` mode, which superposes and reports the RMSD without rendering
+anything, so it needs neither Chrome nor ImageMagick:
 
-pred = pdbx.get_structure(pdbx.CIFFile.read(
-    "quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif"), model=1)
-ref = pdbx.get_structure(pdbx.CIFFile.read("figures/1ubq.cif"), model=1)
-ref = ref[struc.filter_amino_acids(ref) & ~ref.hetero]      # drop waters and ligands
-
-pred_ca, ref_ca = pred[pred.atom_name == "CA"], ref[ref.atom_name == "CA"]
-fitted, transform = struc.superimpose(ref_ca, pred_ca)
-print(f"RMSD {struc.rmsd(ref_ca, fitted):.2f} A")          # -> 0.73
-
-pred_fitted = transform.apply(pred)                          # for rendering the overlay
-
-# second row of the table: the folded core, excluding the flexible tail
-core = pred_ca.res_id <= 72
-core_fitted, _ = struc.superimpose(ref_ca[core], pred_ca[core])
-print(f"RMSD 1-72 {struc.rmsd(ref_ca[core], core_fitted):.2f} A")   # -> 0.44
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py score \
+    quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif \
+    figures/1ubq.cif --residues 1-72
 ```
 
-The reference is the one fetched in the block above. This works because ubiquitin's residue
-numbering matches one to one between the two files; different constructs need the residues
-matched by identity first, as the complexes further down do.
+```
+  all matched atoms       0.73 A  over 76
+  residues 1-72           0.44 A  over 72
+```
+
+`--residues` is what produces the second row: each range is superposed on its own, so it
+measures that region's accuracy rather than its placement within the whole.
+
+Residues are paired between the two structures by **identical residue name**, not by residue
+id. Ubiquitin happens to number one to one, so it would not matter here, but the complexes
+further down renumber their chains and matching on id alone silently drops or misaligns them.
 
 </details>
 

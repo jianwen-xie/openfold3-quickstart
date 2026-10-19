@@ -120,6 +120,24 @@ def superpose(pred, ref, chain_map=None):
     return transform.apply(pred), float(struc.rmsd(R, fitted)), len(P)
 
 
+def _score(pred, ref, chain_map, ranges) -> None:
+    """Report RMSD over everything matched, then over each requested residue range."""
+    P, R = matched_coords(pred, ref, chain_map)
+    fitted, _ = struc.superimpose(R, P)
+    print(f"  all matched atoms      {struc.rmsd(R, fitted):5.2f} A  over {len(P)}")
+    if not ranges:
+        return
+    # the ranges are re-matched from scratch so each is superposed on itself,
+    # which is what a per-region RMSD means
+    pca = pred[struc.filter_amino_acids(pred) & ~pred.hetero]
+    pca = pca[pca.atom_name == "CA"]
+    for lo, hi in ranges:
+        sel = pred[np.isin(pred.res_id, np.arange(lo, hi + 1))]
+        Ps, Rs = matched_coords(sel, ref, chain_map)
+        f, _ = struc.superimpose(Rs, Ps)
+        print(f"  residues {lo}-{hi:<13} {struc.rmsd(Rs, f):5.2f} A  over {len(Ps)}")
+
+
 def to_cif_text(arr, tmp, name):
     path = tmp / f"{name}.cif"
     f = pdbx.CIFFile(); pdbx.set_structure(f, arr); f.write(str(path))
@@ -207,7 +225,7 @@ def render(html: str, out_png: str, canvas: tuple[int, int],
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("mode", choices=["plddt", "chains", "super"])
+    ap.add_argument("mode", choices=["plddt", "chains", "super", "score"])
     ap.add_argument("model", help="predicted mmCIF")
     ap.add_argument("rest", nargs="+", help="[reference.cif for super] out.png")
     ap.add_argument("--fit-to", help="superpose on this reference before rendering, "
@@ -231,6 +249,10 @@ def main():
                     help="pin a chain id or residue name to a colour, e.g. --colour C:#f6b08c. "
                          "Repeatable. Use it to give two strands of one duplex the same hue so "
                          "they read as a pair rather than as unrelated chains.")
+    ap.add_argument("--residues", metavar="LO-HI",
+                    help="score mode: restrict to this residue range, e.g. 1-72 to exclude a "
+                         "flexible tail. Repeatable for several ranges.", action="append",
+                    default=[])
     ap.add_argument("--ref-chains",
                     help="super mode: use only these reference chains, comma separated, "
                          "mapped onto the prediction's chains in order. A crystal often "
@@ -239,7 +261,11 @@ def main():
                          "copy happens to share chain ids. Example: --ref-chains D,E,F")
     a = ap.parse_args()
 
-    if a.mode == "super":
+    if a.mode == "score":
+        if len(a.rest) != 1:
+            ap.error("score mode takes: model.cif reference.cif")
+        ref_path, out_png = a.rest[0], None
+    elif a.mode == "super":
         if len(a.rest) != 2:
             ap.error("super mode takes: model.cif reference.cif out.png")
         ref_path, out_png = a.rest
@@ -248,8 +274,24 @@ def main():
             ap.error(f"{a.mode} mode takes: model.cif out.png")
         ref_path, out_png = None, a.rest[0]
 
-    tmp = pathlib.Path(out_png).parent
     pred = load(a.model, b_factor=(a.mode == "plddt"))
+
+    if a.mode == "score":
+        ref = load(ref_path)
+        ref = ref[ref.res_name != "HOH"]
+        cmap = None
+        if a.ref_chains:
+            want = [c.strip() for c in a.ref_chains.split(",")]
+            ref = ref[np.isin(ref.chain_id, want)]
+            cmap = dict(zip(sorted(set(pred.chain_id)), want))
+        ranges = []
+        for spec in a.residues:
+            lo, _, hi = spec.partition("-")
+            ranges.append((int(lo), int(hi)))
+        _score(pred, ref, cmap, ranges)
+        return
+
+    tmp = pathlib.Path(out_png).parent
 
     if a.mode == "super":
         ref = load(ref_path)
