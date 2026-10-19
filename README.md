@@ -150,8 +150,24 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py plddt \
     --width 620 --canvas 1400x1100
 ```
 
-Running it through `pixi run` is what supplies biotite. Chrome and ImageMagick have to be on
-your `PATH` already; the script exits with a clear message if either is missing.
+Running it through `pixi run` is what supplies biotite. Chrome and ImageMagick are not in the
+pixi environment, so they have to be on your `PATH`. Check with:
+
+```bash
+google-chrome --version || chromium --version
+magick --version || convert --version
+```
+
+If either is missing, on Debian or Ubuntu:
+
+```bash
+sudo apt install chromium-browser imagemagick
+```
+
+and on macOS, `brew install --cask google-chrome` and `brew install imagemagick`. The script
+accepts any of the usual binary names, `google-chrome`, `chromium` or `chromium-browser`, and
+`magick` from ImageMagick 7 or `convert` from 6. It exits naming what is missing and how to
+install it.
 
 `--fit-to` renders the prediction **after superposing it on the reference**, so this figure and
 the superposition below look at the molecule from the same angle. Rendering the raw file gives

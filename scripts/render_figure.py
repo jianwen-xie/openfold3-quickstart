@@ -167,22 +167,37 @@ def style_super(sticks, ref_sticks, spheres):
     return "\n".join(out)
 
 
-def render(html, out_png, canvas, width, border):
-    for tool in ("google-chrome", "convert"):
-        if shutil.which(tool) is None:
-            sys.exit(f"error: {tool} not found on PATH. "
-                     "Chrome and ImageMagick are not part of the pixi environment.")
+# These ship under different binary names depending on the platform: Chromium on most
+# Linux distributions, and ImageMagick 7 replaced `convert` with `magick`.
+CHROME_NAMES = ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser")
+MAGICK_NAMES = ("magick", "convert")
+
+
+def _find(names: tuple[str, ...], label: str, hint: str) -> str:
+    for name in names:
+        if shutil.which(name):
+            return name
+    sys.exit(f"error: {label} not found on PATH (looked for: {', '.join(names)}).\n"
+             f"       {hint}")
+
+
+def render(html: str, out_png: str, canvas: tuple[int, int],
+           width: int, border: int) -> None:
+    chrome = _find(CHROME_NAMES, "Chrome or Chromium",
+                   "Ubuntu: sudo apt install chromium-browser  |  macOS: brew install --cask google-chrome")
+    magick = _find(MAGICK_NAMES, "ImageMagick",
+                   "Ubuntu: sudo apt install imagemagick       |  macOS: brew install imagemagick")
     out = pathlib.Path(out_png)
     page = out.with_suffix(".html")
     page.write_text(html)
-    subprocess.run(["google-chrome", "--headless", "--disable-gpu",
+    subprocess.run([chrome, "--headless", "--disable-gpu",
                     f"--screenshot={out}", f"--window-size={canvas[0]},{canvas[1]}",
                     "--virtual-time-budget=30000", f"file://{page.absolute()}"],
                    check=True, capture_output=True)
     # Raw renders are ~430 KB with large margins. Trim, add a small margin back so
     # nothing touches the edge, scale to the width used in the README, and reduce
     # to a 256-colour palette.
-    subprocess.run(["convert", str(out), "-trim", "+repage",
+    subprocess.run([magick, str(out), "-trim", "+repage",
                     "-bordercolor", "white", "-border", str(border),
                     "-resize", f"{width}x", "-colors", "256", "-strip", str(out)],
                    check=True)
