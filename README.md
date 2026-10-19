@@ -133,7 +133,12 @@ headless Chrome, then trim and scale to a size that belongs in a README. Copy it
 standing in:
 
 ```bash
-git clone --depth 1 https://github.com/jianwen-xie/openfold3-quickstart.git /tmp/of3-qs
+# if you already have this repo checked out somewhere
+cp /path/to/openfold3-quickstart/scripts/render_figure.py .
+
+# or fetch just the script. This repo is private, so the clone needs your own
+# GitHub access; an unauthenticated clone reports "Repository not found".
+git clone --depth 1 git@github.com:jianwen-xie/openfold3-quickstart.git /tmp/of3-qs
 cp /tmp/of3-qs/scripts/render_figure.py .
 ```
 
