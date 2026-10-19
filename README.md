@@ -193,7 +193,7 @@ import biotite.structure.io.pdbx as pdbx
 
 pred = pdbx.get_structure(pdbx.CIFFile.read(
     "quickstart_inference/ubiquitin/seed_42/ubiquitin_seed_42_sample_1_model.cif"), model=1)
-ref = pdbx.get_structure(pdbx.CIFFile.read("1ubq.cif"), model=1)
+ref = pdbx.get_structure(pdbx.CIFFile.read("figures/1ubq.cif"), model=1)
 ref = ref[struc.filter_amino_acids(ref) & ~ref.hetero]      # drop waters and ligands
 
 pred_ca, ref_ca = pred[pred.atom_name == "CA"], ref[ref.atom_name == "CA"]
@@ -208,8 +208,9 @@ core_fitted, _ = struc.superimpose(ref_ca[core], pred_ca[core])
 print(f"RMSD 1-72 {struc.rmsd(ref_ca[core], core_fitted):.2f} A")   # -> 0.44
 ```
 
-Get the reference with `curl -O https://files.rcsb.org/download/1UBQ.cif`. This works because
-the residue numbering matches one to one; different constructs need a sequence alignment first.
+The reference is the one fetched in the block above. This works because ubiquitin's residue
+numbering matches one to one between the two files; different constructs need the residues
+matched by identity first, as the complexes further down do.
 
 </details>
 
