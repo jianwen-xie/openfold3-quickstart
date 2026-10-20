@@ -551,11 +551,14 @@ pixi run -e openfold3-cuda12 python read_metrics.py quickstart_run --summary
 ```
 
 ```
-quickstart_run/wandb/offline-run-20261009_184856-tsdsp7qu/run-tsdsp7qu.wandb  (180 records, logged offline)
-  train/loss                  6.7386 ->    4.9573   (150 points)
-  val/lddt_intra_protein      0.0523 ->    0.0609   (6 points)
-  val/rmsd                   20.9643 ->   20.3001   (6 points)
+quickstart_run/wandb/offline-run-20260924_061308-nxya6bu5/run-nxya6bu5.wandb  (18 records, logged offline)
+  train/loss                  6.7386 ->    8.0661   (8 points)
+  val/lddt_intra_protein      0.0514 ->    0.0485   (2 points)
+  val/rmsd                   20.8094 ->   20.8735   (2 points)
 ```
+
+Eight steps from random weights, so the loss goes up as readily as down. The run proves the
+pipeline; it is not learning to fold.
 
 Without `--summary` it prints every step; `--csv out.csv` exports instead, and `--list-keys`
 shows everything the run logged. It reads online runs too, so the same command works either
