@@ -611,34 +611,13 @@ Eight steps is too few to plot, so the figure below is the same pipeline run lon
   <img src="assets/training_curve.png" alt="Training loss falling while validation lDDT stays flat" width="820">
 </p>
 
-| | start | end |
-|---|---:|---:|
-| `train/loss` | 6.74 | 4.96 |
-| `val/lddt_intra_protein` | 0.052 | 0.061 |
-| `val/rmsd` | 20.96 Å | 20.30 Å |
-
-**The loss falls and it means nothing.** It drops by a quarter while accuracy on the four
-held-out structures does not move: lDDT stays near 0.05 where 1.0 is perfect, and RMSD sits
-above 20 Å. The model is fitting eight structures, not learning to fold. Read this curve as a
-pipeline check, not as progress.
-
 <details>
-<summary>Why it cannot do better, and how the figure was made</summary>
+<summary>How this figure was made</summary>
 
-**Training starts from random weights.** `restart_checkpoint_path: last` finds no checkpoint on
-a first run, and Lightning logs `no last checkpoint available. No checkpoint will be loaded`.
-It does not fall back to the released parameters that inference uses, so this is a fresh model,
-which is why its predictions sit ~20 Å from the answer. The quickstart trains a new model
-badly; it does not fine-tune a good one. That, and eight structures being far too few to
-generalise from, is the whole story. For a curve that means something, see
-[Training on the full dataset](#training-on-the-full-dataset).
-
-The spikes to 12 to 19 are single steps rather than instability: batch size is one structure,
-and a large or awkward crop costs much more loss than a small one.
-
-To plot, keep the extraction above as a list of records instead of writing the CSV. Its
-`if 'train/loss' in row` filter drops every validation record: this run logs 18 of them, and
-not one carries that key.
+Plotting reuses the extraction in [Without a wandb account](#without-a-wandb-account), keeping
+`rows` as a list of records instead of writing the CSV. Drop its `if 'train/loss' in row`
+filter first: it discards every validation record, and this run logs 30 of them, not one of
+which carries that key.
 
 ```python
 import numpy as np, matplotlib
@@ -669,6 +648,52 @@ Two panels rather than twin y-axes: a loss of ~5 and an lDDT of ~0.05 share no s
 overlaying them lets the crossing point be moved anywhere by choosing the limits. The lDDT
 panel is drawn over its full 0 to 1 range for the same reason; zoomed to 0.05 to 0.06 those
 six points look like a healthy climb.
+
+</details>
+
+| | start | end |
+|---|---:|---:|
+| `train/loss` | 6.74 | 4.96 |
+| `val/lddt_intra_protein` | 0.052 | 0.061 |
+| `val/rmsd` | 20.96 Å | 20.30 Å |
+
+**The loss falls and it means nothing.** It drops by a quarter while accuracy on the four
+held-out structures does not move: lDDT stays near 0.05 where 1.0 is perfect, and RMSD sits
+above 20 Å. The model is fitting eight structures, not learning to fold. Read this curve as a
+pipeline check, not as progress.
+
+<details>
+<summary>How these numbers were made</summary>
+
+First and last value of each series, from the same `rows`:
+
+```python
+for k in ("train/loss", "val/lddt_intra_protein", "val/rmsd"):
+    v = [r[k] for r in sorted(rows, key=lambda r: r["_step"]) if k in r]
+    print(f"{k:24} {v[0]:8.4f} -> {v[-1]:8.4f}   ({len(v)} points)")
+```
+
+```
+train/loss                 6.7386 ->   4.9573   (150 points)
+val/lddt_intra_protein     0.0523 ->   0.0609   (6 points)
+val/rmsd                  20.9643 ->  20.3001   (6 points)
+```
+
+</details>
+
+<details>
+<summary>Why it cannot do better</summary>
+
+**Training starts from random weights.** `restart_checkpoint_path: last` finds no checkpoint on
+a first run, and Lightning logs `no last checkpoint available. No checkpoint will be loaded`.
+It does not fall back to the released parameters that inference uses, so this is a fresh model,
+which is why its predictions sit ~20 Å from the answer. The quickstart trains a new model
+badly; it does not fine-tune a good one. That, and eight structures being far too few to
+generalise from, is the whole story. For a curve that means something, see
+[Training on the full dataset](#training-on-the-full-dataset).
+
+The spikes to 12 to 19 are single steps rather than instability: batch size is one structure,
+and a large or awkward crop costs much more loss than a small one.
 
 </details>
 
