@@ -643,10 +643,6 @@ quickstart_run/
 └── logs/                           always empty
 ```
 
-Two traps in that layout. Enabling logging **moves the checkpoint** out of
-`quickstart_run/checkpoints/`, so hardcoded paths break. And `logs/` is always empty, whichever
-logging mode you use.
-
 ### Across multiple GPUs
 
 *To follow.* Set `pl_trainer_args.devices: 8`; the launch command is unchanged.
