@@ -272,6 +272,34 @@ read `0.0` for ubiquitin, where a single chain has no interface to score. For an
 more than one component it is the number to watch, not `ptm`.
 
 <details>
+<summary>How these numbers were made</summary>
+
+`avg_plddt`, `ptm` and `iptm` are read from the aggregated confidences file that inference
+writes. The rest are measured:
+
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py score \
+    quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif figures/7l39.cif \
+    --ref-ligand MBN --plddt
+```
+
+```
+  all matched atoms       0.23 A  over 162
+  ligand centroid         0.33 A  (LIG0 vs MBN)
+  mean pLDDT              97.8  over 1312 atoms
+     very high >=90    96.3%
+     confident 70-90    3.6%
+     low 50-70          0.1%
+     very low <50       0.0%
+```
+
+The ligand distance is measured after the protein has been superposed, so it reports the
+pose rather than the fold. `--plddt` reads the B-factor column, which is where OpenFold3
+stores per-atom confidence.
+
+</details>
+
+<details>
 <summary>How this figure was made</summary>
 
 Two renders, side by side. The second uses `--focus`, which frames a bound ligand and draws

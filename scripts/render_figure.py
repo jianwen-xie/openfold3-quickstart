@@ -120,6 +120,30 @@ def superpose(pred, ref, chain_map=None):
     return transform.apply(pred), float(struc.rmsd(R, fitted)), len(P)
 
 
+def _ligand_offset(pred_fitted, ref, pred_resn: str, ref_resn: str) -> None:
+    """Centroid distance between the predicted ligand and the crystal's, measured after the
+    protein has been superposed, so it reports the pose rather than the fold."""
+    lp = pred_fitted[(pred_fitted.res_name == pred_resn) & (pred_fitted.element != "H")]
+    lr = ref[(ref.res_name == ref_resn) & (ref.element != "H")]
+    if not lp.array_length() or not lr.array_length():
+        print(f"  ligand {pred_resn}/{ref_resn}: not found in one of the files")
+        return
+    d = float(np.linalg.norm(lp.coord.mean(0) - lr.coord.mean(0)))
+    print(f"  ligand centroid        {d:5.2f} A  ({pred_resn} vs {ref_resn})")
+
+
+def _plddt_bands(path: str) -> None:
+    """The four AlphaFold confidence bands, read from the B-factor column."""
+    a = load(path, b_factor=True)
+    b = a.b_factor
+    n = len(b)
+    print(f"  mean pLDDT             {b.mean():5.1f}  over {n} atoms")
+    for label, lo, hi in (("very high >=90", 90, 101), ("confident 70-90", 70, 90),
+                          ("low 50-70", 50, 70), ("very low <50", 0, 50)):
+        pct = 100.0 * ((b >= lo) & (b < hi)).sum() / n
+        print(f"     {label:16s} {pct:5.1f}%")
+
+
 def _contacts(pred) -> None:
     """Closest heavy-atom approach between every pair of chains, which is what says
     whether a low chain_pair_iptm is reporting a bad interface or no interface."""
@@ -320,6 +344,8 @@ def main():
                     help="pin a chain id or residue name to a colour, e.g. --colour C:#f6b08c. "
                          "Repeatable. Use it to give two strands of one duplex the same hue so "
                          "they read as a pair rather than as unrelated chains.")
+    ap.add_argument("--plddt", action="store_true",
+                    help="score mode: also report mean pLDDT and the four confidence bands")
     ap.add_argument("--per-chain", action="store_true",
                     help="score mode: also report each chain superposed on its own")
     ap.add_argument("--contacts", action="store_true",
@@ -382,8 +408,16 @@ def main():
             lo, _, hi = spec.partition("-")
             ranges.append((int(lo), int(hi)))
         _score(pred, ref, cmap, ranges, a.per_chain)
+        if a.ref_ligand:
+            ligs = nonpolymer(pred)
+            if ligs:
+                P, R = matched_coords(pred, ref, cmap)
+                _, tr = struc.superimpose(R, P)
+                _ligand_offset(tr.apply(pred), ref, ligs[0], a.ref_ligand)
         if a.contacts:
             _contacts(pred)
+        if a.plddt:
+            _plddt_bands(a.model)
         return
 
     tmp = pathlib.Path(out_png).parent
