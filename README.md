@@ -597,30 +597,24 @@ quickstart_run/
 <details>
 <summary>Without a wandb account</summary>
 
-The run works fully offline, with no account and no key. One environment variable does it, and
-the config needs no change:
+No extra edits: the same config as above, the same three values. Skip `wandb login` and prefix
+the training command with `WANDB_MODE=offline`:
 
 ```bash
 WANDB_MODE=offline pixi run -e openfold3-cuda12 run_openfold train \
     --runner-yaml datasets/quickstart_single_h100.yaml --seed 42
 ```
 
-`WANDB_MODE` is the only switch. The config schema accepts `offline: true` under
-`wandb_config`, but the trainer never reads it: the field is declared in `WandbConfig` and then
-passed to neither `wandb.init` nor `WandbLogger`. Setting it on its own leaves you online, and
-once `wandb login` has stored a key that happens silently, the run uploading as though nothing
-were different.
+`WANDB_MODE` is the only switch. `offline: true` under `wandb_config` is accepted by the config
+schema but ignored by the trainer, so it will not do this on its own.
 
-Check the directory name rather than the config. An offline run says so, and is written to
-`offline-run-*` instead of `run-*`:
+Confirm it stayed local. An offline run is written to `offline-run-*`, an uploaded one to `run-*`:
 
-```
-wandb: W&B syncing is set to `offline` in this directory.
-wandb: Run data is saved locally in quickstart_run/wandb/offline-run-20261020_152616-tc0blxnr
+```bash
+ls -dt quickstart_run/wandb/*run-* | head -1
 ```
 
-There is no dashboard, and the metrics live in a binary `.wandb` file.
-`scripts/read_metrics.py` in this repo decodes it:
+The metrics are in a binary `.wandb` file. `scripts/read_metrics.py` in this repo decodes it:
 
 ```bash
 curl -O https://raw.githubusercontent.com/jianwen-xie/openfold3-quickstart/main/scripts/read_metrics.py
@@ -629,17 +623,16 @@ pixi run -e openfold3-cuda12 python read_metrics.py quickstart_run --summary
 ```
 
 ```
-quickstart_run/wandb/offline-run-20260924_061308-nxya6bu5/run-nxya6bu5.wandb  (18 records, logged offline)
-  train/loss                  6.7386 ->    8.0661   (8 points)
+quickstart_run/wandb/offline-run-20261020_155322-1yo9xs53/run-1yo9xs53.wandb  (18 records, logged offline)
+  train/loss                  6.7386 ->    8.0662   (8 points)
   val/lddt_intra_protein      0.0514 ->    0.0485   (2 points)
-  val/rmsd                   20.8094 ->   20.8735   (2 points)
+  val/rmsd                   20.8094 ->   21.0695   (2 points)
 ```
 
-Without `--summary` it prints every step; `--csv out.csv` exports instead, and `--list-keys`
-shows everything the run logged. It reads online runs too, so the same command works either
-way.
+`--csv out.csv` exports instead, `--list-keys` shows everything logged, and without `--summary`
+it prints every step.
 
-A finished offline run can also be uploaded afterwards, which gets the dashboard back:
+To upload afterwards and get the dashboard back:
 
 ```bash
 pixi run -e openfold3-cuda12 wandb sync quickstart_run/wandb/offline-run-*
