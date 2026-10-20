@@ -423,8 +423,8 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py score \
     --ref-chains A,B,C,D --per-chain
 ```
 
-The first line of output is the first row of the table. `--per-chain` adds the rest,
-superposing each chain on its own instead of moving the assembly as a unit.
+`--per-chain` adds the rows below the first, superposing each chain on its own instead of
+moving the assembly as a unit.
 
 </details>
 
@@ -471,8 +471,6 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py score \
     quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif figures/7cnx.cif \
     --ref-chains A,B,C,D --contacts
 ```
-
-Both print the six pairs in the order the table lists them.
 
 </details>
 
