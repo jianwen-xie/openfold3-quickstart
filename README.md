@@ -791,7 +791,7 @@ support subunit.
 ```bash
 pixi run -e openfold3-cuda12 python figures/render_figure.py chains \
     demo_mhc/mhc_class_i/seed_42/mhc_class_i_seed_42_sample_1_model.cif \
-    figures/demo_mhc_chains.png --rotate 70 --zoom 0.98 --sticks C --width 440 \
+    figures/demo_mhc_chains.png --rotate 200 --zoom 0.98 --sticks C --width 440 \
     --canvas 1200x1000
 ```
 
@@ -1053,12 +1053,14 @@ constraint in green**. The ligand sits among them, which is what the constraint 
 ```bash
 pixi run -e openfold3-cuda12 python figures/render_figure.py chains \
     demo_bla/bla_1PZP_FTA/seed_42/bla_1PZP_FTA_seed_42_sample_1_model.cif \
-    figures/demo_bla_chains.png --rotate 60 --zoom 1.30 --translucent \
-    --width 680 --canvas 1200x980
+    figures/demo_bla_chains.png --rotate 150 --zoom 1.05 --translucent \
+    --highlight 2,5,9,12,33,34,35,36 --colour 'LIG0:#eb6834' \
+    --width 620 --canvas 1200x980
 ```
 
 `--translucent` drops the cartoon's opacity, without which the buried ligand is hidden
-entirely.
+entirely. `--highlight` draws the eight residues the constraint names, so the constraint
+itself is visible and not only its effect.
 
 </details>
 

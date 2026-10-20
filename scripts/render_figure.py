@@ -149,7 +149,8 @@ def style_plddt():
             'v.addStyle({not:{atom:["N","C","O"]}}, {stick:{radius:0.12, colorfunc: band}});')
 
 
-def style_chains(chains, sticks, translucent, spheres, override=None):
+def style_chains(chains, sticks, translucent, spheres, override=None,
+                 ligands=(), highlight=(), highlight_colour="#1baf7a"):
     out = []
     override = override or {}
     op = ", opacity:0.55" if translucent else ""
@@ -162,6 +163,16 @@ def style_chains(chains, sticks, translucent, spheres, override=None):
     for j, resn in enumerate(spheres):
         col = override.get(resn, CHAIN_COLOURS[(len(chains) + j) % len(CHAIN_COLOURS)])
         out.append(f'v.addStyle({{resn:"{resn}"}}, {{sphere:{{radius:1.1, color:"{col}"}}}});')
+    # ligands get sticks: a per-chain cartoon draws nothing for them
+    for resn in ligands:
+        if resn in spheres:
+            continue
+        col = override.get(resn, CHAIN_COLOURS[1])
+        out.append(f'v.setStyle({{resn:"{resn}"}}, {{stick:{{radius:0.28, color:"{col}"}}}});')
+    if highlight:
+        ids = ",".join(str(i) for i in highlight)
+        out.append(f'v.addStyle({{resi:[{ids}], hetflag:false}}, '
+                   f'{{stick:{{radius:0.13, color:"{highlight_colour}"}}}});')
     return "\n".join(out)
 
 
@@ -285,6 +296,10 @@ def main():
                     help="pin a chain id or residue name to a colour, e.g. --colour C:#f6b08c. "
                          "Repeatable. Use it to give two strands of one duplex the same hue so "
                          "they read as a pair rather than as unrelated chains.")
+    ap.add_argument("--highlight", metavar="IDS",
+                    help="chains mode: draw these residue ids as sticks in a contrasting "
+                         "colour, e.g. the residues named in a pocket constraint. "
+                         "Comma separated: --highlight 2,5,9,12")
     ap.add_argument("--ref-ligand", metavar="RESN",
                     help="super mode: the reference's name for the ligand, when it differs from "
                          "the prediction's. A crystal often calls it something else, and a "
@@ -375,9 +390,11 @@ def main():
                 ap.error(f"--colour expects KEY:HEX, got {spec!r}")
             k, v = spec.split(":", 1)
             override[k.strip()] = v.strip()
+        hl = [int(x) for x in a.highlight.split(",")] if a.highlight else []
         style = (style_plddt() if a.mode == "plddt"
                  else style_chains(sorted(set(pred.chain_id)), a.sticks,
-                                   a.translucent, a.spheres, override))
+                                   a.translucent, a.spheres, override,
+                                   nonpolymer(pred), hl))
 
     w, h = (int(x) for x in a.canvas.lower().split("x"))
     page = PAGE
