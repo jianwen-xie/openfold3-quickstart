@@ -428,14 +428,27 @@ is where a complex tells you more than any single number can:
 <details>
 <summary>How these numbers were made</summary>
 
-The `chain_pair_iptm` column is read straight out of the inference output, no computation
-needed:
+Every confidence number here, the overall scores and the per-pair ones, is read straight out
+of the inference output. No computation needed:
 
 ```bash
 python3 -c "
 import json
-d = json.load(open('quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_confidences_aggregated.json'))
-print(d['chain_pair_iptm'])"
+f = 'quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_confidences_aggregated.json'
+d = json.load(open(f))
+for k in ('avg_plddt', 'ptm', 'iptm', 'has_clash'):
+    print(f'{k:16s} {d[k]:.3f}')
+for pair, v in d['chain_pair_iptm'].items():
+    print(f'{pair:16s} {v:.3f}')"
+```
+
+```
+avg_plddt        92.804
+ptm              0.897
+iptm             0.889
+has_clash        0.000
+(A, B)           0.959     (A, C)           0.846     (A, D)           0.783
+(B, C)           0.784     (B, D)           0.543     (C, D)           0.958
 ```
 
 The RMSDs and the distances are measured against the crystal structure:
