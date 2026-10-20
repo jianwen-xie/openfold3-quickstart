@@ -125,7 +125,7 @@ is flexible in isolation rather than failing to predict it. Low confidence is fr
 right answer.
 
 <details>
-<summary>How this image was made</summary>
+<summary>How this figure was made</summary>
 
 `scripts/render_figure.py` in this repo does the whole job: superpose, render through
 headless Chrome, then trim and scale to a size that belongs in a README.
@@ -260,6 +260,40 @@ close up, with the protein translucent, where the **blue ring is the predicted l
 the **black ring beneath it the crystallographic one**, among the side chains lining the
 pocket.
 
+<details>
+<summary>How this figure was made</summary>
+
+Two renders, side by side. The second uses `--focus`, which frames a bound ligand and draws
+the protein translucent with the pocket's side chains around it:
+
+```bash
+curl -o figures/7l39.cif https://files.rcsb.org/download/7L39.cif
+
+pixi run -e openfold3-cuda12 python figures/render_figure.py super \
+    quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif figures/7l39.cif \
+    figures/lyso_left.png --ref-ligand MBN \
+    --rotate 0 --zoom 1.2 --width 420 --canvas 1000x1000
+
+pixi run -e openfold3-cuda12 python figures/render_figure.py super \
+    quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif figures/7l39.cif \
+    figures/lyso_right.png --focus LIG0 --focus-ref MBN --zoom 0.62 --width 420 --canvas 1000x1000
+
+convert \
+    \( figures/lyso_left.png  -background white -gravity east -splice 110x0 \) \
+    \( figures/lyso_right.png -background white -gravity west -splice 110x0 \) \
+    -background white -gravity center +append \
+    -resize 900x -colors 256 -strip figures/lysozyme_toluene.png
+```
+
+The crystal's ligand has to be named, as `--ref-ligand` or `--focus-ref`, because the two
+files call the same molecule different things: `LIG0` in the prediction, `MBN` in the crystal.
+
+Only the close-up is `--translucent`. It is the only way to see into a buried cavity, but it
+washes out the navy against grey that makes the left panel readable.
+
+</details>
+
+
 | Superposition | Deviation |
 |---|---|
 | Protein Cα, 162 residues | 0.23 Å |
@@ -296,39 +330,6 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py score \
 The ligand distance is measured after the protein has been superposed, so it reports the
 pose rather than the fold. `--plddt` reads the B-factor column, which is where OpenFold3
 stores per-atom confidence.
-
-</details>
-
-<details>
-<summary>How this figure was made</summary>
-
-Two renders, side by side. The second uses `--focus`, which frames a bound ligand and draws
-the protein translucent with the pocket's side chains around it:
-
-```bash
-curl -o figures/7l39.cif https://files.rcsb.org/download/7L39.cif
-
-pixi run -e openfold3-cuda12 python figures/render_figure.py super \
-    quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif figures/7l39.cif \
-    figures/lyso_left.png --ref-ligand MBN \
-    --rotate 0 --zoom 1.2 --width 420 --canvas 1000x1000
-
-pixi run -e openfold3-cuda12 python figures/render_figure.py super \
-    quickstart_cofold/pdb_7L39/seed_42/pdb_7L39_seed_42_sample_1_model.cif figures/7l39.cif \
-    figures/lyso_right.png --focus LIG0 --focus-ref MBN --zoom 0.62 --width 420 --canvas 1000x1000
-
-convert \
-    \( figures/lyso_left.png  -background white -gravity east -splice 110x0 \) \
-    \( figures/lyso_right.png -background white -gravity west -splice 110x0 \) \
-    -background white -gravity center +append \
-    -resize 900x -colors 256 -strip figures/lysozyme_toluene.png
-```
-
-The crystal's ligand has to be named, as `--ref-ligand` or `--focus-ref`, because the two
-files call the same molecule different things: `LIG0` in the prediction, `MBN` in the crystal.
-
-Only the close-up is `--translucent`. It is the only way to see into a buried cavity, but it
-washes out the navy against grey that makes the left panel readable.
 
 </details>
 
