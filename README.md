@@ -509,11 +509,17 @@ exist.
 
 ### Scheme 1: single GPU, H100
 
-Log in to Weights & Biases once, so the run can stream its losses to a dashboard:
+Training streams its losses to a Weights & Biases dashboard, which needs a free account.
+`wandb login` asks for an API key, created at [wandb.ai/authorize](https://wandb.ai/authorize),
+and saves it to `~/.netrc`. With no terminal to prompt in, a batch job for instance, set
+`WANDB_API_KEY` in the environment instead.
 
 ```bash
 pixi run -e openfold3-cuda12 wandb login
 ```
+
+To skip the account entirely, follow [Without a wandb account](#without-a-wandb-account): it
+logs to a local file, needs no credentials, and is the path the notebook takes.
 
 The generated config logs nothing, so every loss it computes is discarded. Copy it and turn
 logging on. Copy rather than edit in place: the file's first line reads
@@ -572,7 +578,7 @@ pixi run -e openfold3-cuda12 run_openfold train \
 ```
 
 Two epochs of four steps, a few minutes. The curve appears in your wandb project and updates
-as it trains. To run without an account, see [Without a wandb account](#without-a-wandb-account).
+as it trains.
 
 Output goes to the `output_dir` set in the config:
 
