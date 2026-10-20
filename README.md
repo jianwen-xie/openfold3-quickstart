@@ -472,8 +472,7 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py score \
     --ref-chains A,B,C,D --contacts
 ```
 
-Both print the six pairs in the order the table lists them. Without `--contacts` you cannot
-tell a badly modelled interface from one that is not there.
+Both print the six pairs in the order the table lists them.
 
 </details>
 
