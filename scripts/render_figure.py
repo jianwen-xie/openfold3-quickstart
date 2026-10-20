@@ -381,7 +381,12 @@ def main():
         if a.fit_to:
             ref = load(a.fit_to)
             ref = ref[ref.res_name != "HOH"]
-            pred, rmsd, n = superpose(pred, ref)
+            cmap = None
+            if a.ref_chains:
+                want = [c.strip() for c in a.ref_chains.split(",")]
+                ref = ref[np.isin(ref.chain_id, want)]
+                cmap = dict(zip(sorted(set(pred.chain_id)), want))
+            pred, rmsd, n = superpose(pred, ref, cmap)
             print(f"  fitted to reference: {rmsd:.2f} A over {n} matched atoms")
         models = [to_cif_text(pred, tmp, "_pred")]
         override = {}

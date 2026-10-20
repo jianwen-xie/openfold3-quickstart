@@ -335,8 +335,11 @@ chains and three distinct interfaces right at once.
 <summary>How this figure was made</summary>
 
 ```bash
+curl -o figures/7cnx.cif https://files.rcsb.org/download/7CNX.cif
+
 pixi run -e openfold3-cuda12 python figures/render_figure.py chains quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif \
-    figures/psd_chains.png --rotate 20 --tilt 10 --zoom 1.10 --width 640 --canvas 1050x1200 \
+    figures/psd_chains.png --fit-to figures/7cnx.cif --ref-chains A,B,C,D \
+    --rotate 20 --tilt 10 --zoom 1.10 --width 640 --canvas 1050x1200 \
     --colour 'A:#27408B' --colour 'C:#7FB2E5' --colour 'B:#C2461E' --colour 'D:#F0A33C'
 ```
 
@@ -789,10 +792,12 @@ support subunit.
 <summary>How this figure was made</summary>
 
 ```bash
+curl -o figures/1duz.cif https://files.rcsb.org/download/1DUZ.cif
+
 pixi run -e openfold3-cuda12 python figures/render_figure.py chains \
     demo_mhc/mhc_class_i/seed_42/mhc_class_i_seed_42_sample_1_model.cif \
-    figures/demo_mhc_chains.png --rotate 200 --zoom 0.98 --sticks C --width 440 \
-    --canvas 1200x1000
+    figures/demo_mhc_chains.png --fit-to figures/1duz.cif --ref-chains D,E,F \
+    --rotate 70 --zoom 0.98 --sticks C --width 440 --canvas 1200x1000
 ```
 
 `--sticks C` is needed because a nine-residue chain has no secondary structure for a cartoon
@@ -892,9 +897,12 @@ spheres**. Each finger sits in the major groove and carries its own zinc.
 <summary>How this figure was made</summary>
 
 ```bash
+curl -o figures/1aay.cif https://files.rcsb.org/download/1AAY.cif
+
 pixi run -e openfold3-cuda12 python figures/render_figure.py chains \
     demo_zif/zif268_dna/seed_42/zif268_dna_seed_42_sample_1_model.cif \
-    figures/demo_zif_chains.png --rotate 60 --zoom 0.98 --spheres ZN --width 470 \
+    figures/demo_zif_chains.png --fit-to figures/1aay.cif \
+    --rotate 60 --zoom 0.98 --spheres ZN --width 470 \
     --colour 'B:#eb6834' --colour 'C:#f6b08c' --colour 'ZN:#1baf7a'
 ```
 
@@ -985,10 +993,12 @@ binds.
 <summary>How this figure was made</summary>
 
 ```bash
+curl -o figures/1ycr.cif https://files.rcsb.org/download/1YCR.cif
+
 pixi run -e openfold3-cuda12 python figures/render_figure.py chains \
     demo_mdm2/mdm2/seed_42/mdm2_seed_42_sample_1_model.cif \
-    figures/demo_mdm2_chains.png --rotate 45 --zoom 1.30 --sticks B \
-    --width 480 --canvas 1100x950
+    figures/demo_mdm2_chains.png --fit-to figures/1ycr.cif \
+    --rotate 45 --zoom 1.30 --sticks B --width 480 --canvas 1100x950
 ```
 
 `--sticks B` draws the ten-residue cyclic peptide, which is too short for a cartoon to trace.
@@ -1051,11 +1061,14 @@ constraint in green**. The ligand sits among them, which is what the constraint 
 <summary>How this figure was made</summary>
 
 ```bash
+curl -o figures/1pzp.cif https://files.rcsb.org/download/1PZP.cif
+
 pixi run -e openfold3-cuda12 python figures/render_figure.py chains \
     demo_bla/bla_1PZP_FTA/seed_42/bla_1PZP_FTA_seed_42_sample_1_model.cif \
-    figures/demo_bla_chains.png --rotate 150 --zoom 1.05 --translucent \
+    figures/demo_bla_chains.png --fit-to figures/1pzp.cif \
+    --rotate 60 --zoom 1.30 --translucent \
     --highlight 2,5,9,12,33,34,35,36 --colour 'LIG0:#eb6834' \
-    --width 620 --canvas 1200x980
+    --width 680 --canvas 1200x980
 ```
 
 `--translucent` drops the cartoon's opacity, without which the buried ligand is hidden
