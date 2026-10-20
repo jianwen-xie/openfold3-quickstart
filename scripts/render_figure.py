@@ -120,11 +120,35 @@ def superpose(pred, ref, chain_map=None):
     return transform.apply(pred), float(struc.rmsd(R, fitted)), len(P)
 
 
-def _score(pred, ref, chain_map, ranges) -> None:
+def _contacts(pred) -> None:
+    """Closest heavy-atom approach between every pair of chains, which is what says
+    whether a low chain_pair_iptm is reporting a bad interface or no interface."""
+    chains = sorted(set(pred.chain_id))
+    heavy = pred[pred.element != "H"]
+    print("  closest approach between chains:")
+    for i, a in enumerate(chains):
+        for b in chains[i + 1:]:
+            P = heavy[heavy.chain_id == a].coord
+            Q = heavy[heavy.chain_id == b].coord
+            d = min(float(np.linalg.norm(P - q, axis=1).min()) for q in Q)
+            print(f"     ({a}, {b}) {d:6.2f} A")
+
+
+def _score(pred, ref, chain_map, ranges, per_chain=False) -> None:
     """Report RMSD over everything matched, then over each requested residue range."""
     P, R = matched_coords(pred, ref, chain_map)
     fitted, _ = struc.superimpose(R, P)
     print(f"  all matched atoms      {struc.rmsd(R, fitted):5.2f} A  over {len(P)}")
+    if per_chain:
+        # each chain superposed on its own, so this is its fold rather than its placement
+        for ch in sorted(set(pred.chain_id)):
+            sel = pred[pred.chain_id == ch]
+            try:
+                Pc, Rc = matched_coords(sel, ref, chain_map)
+            except SystemExit:
+                continue
+            fc, _ = struc.superimpose(Rc, Pc)
+            print(f"  chain {ch} alone         {struc.rmsd(Rc, fc):5.2f} A  over {len(Pc)}")
     if not ranges:
         return
     # the ranges are re-matched from scratch so each is superposed on itself,
@@ -296,6 +320,12 @@ def main():
                     help="pin a chain id or residue name to a colour, e.g. --colour C:#f6b08c. "
                          "Repeatable. Use it to give two strands of one duplex the same hue so "
                          "they read as a pair rather than as unrelated chains.")
+    ap.add_argument("--per-chain", action="store_true",
+                    help="score mode: also report each chain superposed on its own")
+    ap.add_argument("--contacts", action="store_true",
+                    help="score mode: also report the closest approach between every pair of "
+                         "chains, which distinguishes a badly modelled interface from one that "
+                         "does not exist")
     ap.add_argument("--highlight", metavar="IDS",
                     help="chains mode: draw these residue ids as sticks in a contrasting "
                          "colour, e.g. the residues named in a pocket constraint. "
@@ -351,7 +381,9 @@ def main():
         for spec in a.residues:
             lo, _, hi = spec.partition("-")
             ranges.append((int(lo), int(hi)))
-        _score(pred, ref, cmap, ranges)
+        _score(pred, ref, cmap, ranges, a.per_chain)
+        if a.contacts:
+            _contacts(pred)
         return
 
     tmp = pathlib.Path(out_png).parent

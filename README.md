@@ -396,6 +396,44 @@ is where a complex tells you more than any single number can:
 | `(A, D)` and `(B, C)`, across the assembly | 11.4 Å | 0.78 |
 | `(B, D)`, the two α subunits | 27.1 Å | 0.54 |
 
+<details>
+<summary>How these numbers were made</summary>
+
+The `chain_pair_iptm` column is read straight out of the inference output, no computation
+needed:
+
+```bash
+python3 -c "
+import json
+d = json.load(open('quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_confidences_aggregated.json'))
+print(d['chain_pair_iptm'])"
+```
+
+The RMSDs and the distances are measured against the crystal structure:
+
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py score \
+    quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif figures/7cnx.cif \
+    --ref-chains A,B,C,D --per-chain --contacts
+```
+
+```
+  all matched atoms       0.57 A  over 557
+  chain A alone          0.29 A  over 246
+  chain B alone          1.11 A  over 38
+  chain C alone          0.35 A  over 240
+  chain D alone          0.20 A  over 33
+  closest approach between chains:
+     (A, B)   2.72 A     (A, C)   2.65 A     (A, D)  11.42 A
+     (B, C)  11.34 A     (B, D)  27.08 A     (C, D)   2.72 A
+```
+
+`--per-chain` superposes each chain on its own, so those rows measure a chain's fold rather
+than its placement in the assembly. `--contacts` is what makes the next paragraph checkable:
+without it you cannot tell a badly modelled interface from one that is not there.
+
+</details>
+
 The low score is the interesting one, and it is not a warning. `(B, D)` reads 0.54 because
 those two chains sit 27 Å apart and never touch. The metric is scoring an interface that does
 not exist. A low `chain_pair_iptm` means *this pair is not confidently placed relative to each
