@@ -597,25 +597,26 @@ quickstart_run/
 <details>
 <summary>Without a wandb account</summary>
 
-The run works fully offline, with no account and no key. Add one line to the `wandb_config`
-block in your copy of the config:
-
-```yaml
-logging_config:
-  log_lr: true
-  wandb_config:
-    project: openfold3-quickstart
-    experiment_name: single-h100
-    offline: true                  # add this
-```
-
-That is not sufficient on its own. `WANDB_MODE=offline` has to be in the environment too,
-because the YAML flag does not stop `wandb.init` attempting a login, and the run dies before
-training starts:
+The run works fully offline, with no account and no key. One environment variable does it, and
+the config needs no change:
 
 ```bash
 WANDB_MODE=offline pixi run -e openfold3-cuda12 run_openfold train \
     --runner-yaml datasets/quickstart_single_h100.yaml --seed 42
+```
+
+`WANDB_MODE` is the only switch. The config schema accepts `offline: true` under
+`wandb_config`, but the trainer never reads it: the field is declared in `WandbConfig` and then
+passed to neither `wandb.init` nor `WandbLogger`. Setting it on its own leaves you online, and
+once `wandb login` has stored a key that happens silently, the run uploading as though nothing
+were different.
+
+Check the directory name rather than the config. An offline run says so, and is written to
+`offline-run-*` instead of `run-*`:
+
+```
+wandb: W&B syncing is set to `offline` in this directory.
+wandb: Run data is saved locally in quickstart_run/wandb/offline-run-20261020_152616-tc0blxnr
 ```
 
 There is no dashboard, and the metrics live in a binary `.wandb` file.
