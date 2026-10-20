@@ -402,45 +402,6 @@ not exist. A low `chain_pair_iptm` means *this pair is not confidently placed re
 other*, which for a non-contacting pair is both true and harmless. Check it against the
 geometry before treating it as a failure.
 
-<details>
-<summary>How these images were made</summary>
-
-The prediction and the crystal number their chains differently. The α subunit is 1–42 in the
-prediction and 255–292 in the reference, so matching on residue ID alone silently drops both
-α chains and leaves you scoring only the β subunits. Find the offset per chain rather than
-assuming one:
-
-```python
-import numpy as np, biotite.structure as struc, biotite.structure.io.pdbx as pdbx
-
-def ca(path):
-    a = pdbx.get_structure(pdbx.CIFFile.read(path), model=1)
-    a = a[struc.filter_amino_acids(a) & ~a.hetero]
-    return a[a.atom_name == "CA"]
-
-pred, ref = ca("..._sample_1_model.cif"), ca("7cnx.cif")
-
-offsets = {}
-for ch in "ABCD":
-    p, r = pred[pred.chain_id == ch], ref[ref.chain_id == ch]
-    pm = dict(zip(p.res_id.tolist(), p.res_name))
-    rm = dict(zip(r.res_id.tolist(), r.res_name))
-    offsets[ch] = max(range(-5, 300),
-                      key=lambda o: sum(pm[i] == rm[i + o] for i in pm if i + o in rm))
-# -> {"A": 0, "B": 253, "C": 0, "D": 253}, each matching at 100% residue identity
-```
-
-7CNX holds two copies of the tetramer in its asymmetric unit (chains `A`–`H`); `A`–`D` are the
-copy that corresponds. Superpose on all four chains at once, then apply that one transform to
-every atom so both figures end up in the same frame:
-
-```python
-fitted, transform = struc.superimpose(ref_coords, pred_coords)
-pred_fit = transform.apply(pred_full)
-```
-
-</details>
-
 ### Across multiple GPUs
 
 *To follow.* OpenFold3 distributes a multi-query job across GPUs, parallel across queries
@@ -1139,6 +1100,7 @@ one per chain:
 | Zif268 protein, 1 to 85 against 1AAY's 103 to 187 | 102 |
 | β-lactamase, 1-based against 1PZP's Ambler numbering | 25 |
 | MDM2 domain against 1YCR | 22 |
+| PSD β subunits `A`, `C` / α subunits `B`, `D` | 0 / **253** |
 
 β2-microglobulin's `-1` is the kind of thing that is invisible until it is wrong: match on
 residue id alone and every residue shifts by one, which still superposes and still returns a
