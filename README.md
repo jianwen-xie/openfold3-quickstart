@@ -405,8 +405,8 @@ asymmetric unit. It reports 0.57 Å over 557 atoms, the first row of the table b
 |---|---|
 | All four chains at once, 557 residues | 0.57 Å |
 | β subunit `A` alone, 246 residues | 0.29 Å |
-| β subunit `C` alone, 240 residues | 0.35 Å |
 | α subunit `B` alone, 38 residues | 1.11 Å |
+| β subunit `C` alone, 240 residues | 0.35 Å |
 | α subunit `D` alone, 33 residues | 0.20 Å |
 
 The first row is the one that matters. Superposing all four chains together scores the folds
@@ -414,21 +414,46 @@ The first row is the one that matters. Superposing all four chains together scor
 four chains that are each correct but wrongly placed. The navy helix on the left with no grey
 beneath it is a stretch the crystal never resolved; the reference chain starts at residue 8.
 
+<details>
+<summary>How these numbers were made</summary>
+
+```bash
+pixi run -e openfold3-cuda12 python figures/render_figure.py score \
+    quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif figures/7cnx.cif \
+    --ref-chains A,B,C,D --per-chain
+```
+
+The first line of output is the first row of the table. `--per-chain` adds the rest,
+superposing each chain on its own instead of moving the assembly as a unit.
+
+</details>
+
 **Reading `chain_pair_iptm`.** Overall the run scores `avg_plddt` 92.8, `ptm` 0.90, `iptm` 0.89
 and no clashes. But the aggregated file also scores every *pair* of chains separately, and this
 is where a complex tells you more than any single number can:
 
 | | measured closest approach | `chain_pair_iptm` |
 |---|---|---|
-| `(A, B)` and `(C, D)`, α against its own β | 2.7 Å | 0.96 |
-| `(A, C)`, the β–β interface | 2.6 Å | 0.85 |
-| `(A, D)` and `(B, C)`, across the assembly | 11.4 Å | 0.78 |
-| `(B, D)`, the two α subunits | 27.1 Å | 0.54 |
+| `(A, B)`, α against its own β | 2.72 Å | 0.96 |
+| `(A, C)`, the β–β interface | 2.65 Å | 0.85 |
+| `(A, D)`, across the assembly | 11.42 Å | 0.78 |
+| `(B, C)`, across the assembly | 11.34 Å | 0.78 |
+| `(B, D)`, the two α subunits | 27.08 Å | 0.54 |
+| `(C, D)`, α against its own β | 2.72 Å | 0.96 |
+
+The two αβ pairs score identically, `(A, B)` and `(C, D)` both at 2.72 Å and 0.96, which is the
+symmetry of the assembly showing up in the numbers.
+
+The low score is the interesting one, and it is not a warning. `(B, D)` reads 0.54 because
+those two chains sit 27 Å apart and never touch. The metric is scoring an interface that does
+not exist. A low `chain_pair_iptm` means *this pair is not confidently placed relative to each
+other*, which for a non-contacting pair is both true and harmless. Check it against the
+geometry before treating it as a failure.
 
 <details>
 <summary>How these numbers were made</summary>
 
-The confidence columns are read from the file inference already writes:
+The `chain_pair_iptm` column is read from the file inference already writes:
 
 ```bash
 python3 -c "
@@ -439,25 +464,18 @@ print({k: d[k] for k in ('avg_plddt', 'ptm', 'iptm', 'has_clash')})
 print(d['chain_pair_iptm'])"
 ```
 
-The RMSDs and the distances are measured against the crystal:
+The distances are measured against the crystal:
 
 ```bash
 pixi run -e openfold3-cuda12 python figures/render_figure.py score \
     quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_model.cif figures/7cnx.cif \
-    --ref-chains A,B,C,D --per-chain --contacts
+    --ref-chains A,B,C,D --contacts
 ```
 
-`--per-chain` superposes each chain on its own, giving the rows below the first.
-`--contacts` gives the distance column, which is what makes the next paragraph checkable:
-without it you cannot tell a badly modelled interface from one that is not there.
+Both print the six pairs in the order the table lists them. Without `--contacts` you cannot
+tell a badly modelled interface from one that is not there.
 
 </details>
-
-The low score is the interesting one, and it is not a warning. `(B, D)` reads 0.54 because
-those two chains sit 27 Å apart and never touch. The metric is scoring an interface that does
-not exist. A low `chain_pair_iptm` means *this pair is not confidently placed relative to each
-other*, which for a non-contacting pair is both true and harmless. Check it against the
-geometry before treating it as a failure.
 
 ### Across multiple GPUs
 
