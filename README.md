@@ -507,7 +507,7 @@ default `max_epochs` is 2. The 1.6 GB catalogue the first command fetches is a l
 whole PDB training set rather than training data, and can be deleted once the subset caches
 exist.
 
-### Scheme 1: single GPU, H100
+### On one GPU
 
 Training streams its losses to a Weights & Biases dashboard, which needs a free account.
 `wandb login` asks for an API key, created at [wandb.ai/authorize](https://wandb.ai/authorize),
@@ -518,8 +518,56 @@ and saves it to `~/.netrc`. With no terminal to prompt in, a batch job for insta
 pixi run -e openfold3-cuda12 wandb login
 ```
 
-To skip the account entirely, follow [Without a wandb account](#without-a-wandb-account): it
-logs to a local file, needs no credentials, and is the path the notebook takes.
+#### Without a wandb account
+
+The run works fully offline, with no account and no key. Add one line when you copy the config
+below:
+
+```yaml
+logging_config:
+  log_lr: true
+  wandb_config:
+    project: openfold3-quickstart
+    experiment_name: single-h100
+    offline: true                  # add this
+```
+
+That is not sufficient on its own. `WANDB_MODE=offline` has to be in the environment too,
+because the YAML flag does not stop `wandb.init` attempting a login, and the run dies before
+training starts:
+
+```bash
+WANDB_MODE=offline pixi run -e openfold3-cuda12 run_openfold train \
+    --runner-yaml datasets/quickstart_single_h100.yaml --seed 42
+```
+
+There is no dashboard, and the metrics live in a binary `.wandb` file. `scripts/read_metrics.py`
+in this repo decodes it:
+
+```bash
+curl -O https://raw.githubusercontent.com/jianwen-xie/openfold3-quickstart/main/scripts/read_metrics.py
+
+pixi run -e openfold3-cuda12 python read_metrics.py quickstart_run --summary
+```
+
+```
+quickstart_run/wandb/offline-run-20261009_184856-tsdsp7qu/run-tsdsp7qu.wandb  (180 records, logged offline)
+  train/loss                  6.7386 ->    4.9573   (150 points)
+  val/lddt_intra_protein      0.0523 ->    0.0609   (6 points)
+  val/rmsd                   20.9643 ->   20.3001   (6 points)
+```
+
+Without `--summary` it prints every step; `--csv out.csv` exports instead, and `--list-keys`
+shows everything the run logged. It reads online runs too, so the same command works either
+way.
+
+A finished offline run can also be uploaded afterwards, which gets the dashboard back:
+
+```bash
+pixi run -e openfold3-cuda12 wandb sync quickstart_run/wandb/offline-run-*
+```
+
+#### Configure and train
 
 The generated config logs nothing, so every loss it computes is discarded. Copy it and turn
 logging on. Copy rather than edit in place: the file's first line reads
@@ -596,77 +644,14 @@ Two traps in that layout. Enabling logging **moves the checkpoint** out of
 `quickstart_run/checkpoints/`, so hardcoded paths break. And `logs/` is always empty, whichever
 logging mode you use.
 
-### Scheme 2: multiple GPUs, one node
+### Across multiple GPUs
 
 *To follow.* Set `pl_trainer_args.devices: 8`; the launch command is unchanged.
 
-### Scheme 3: multiple nodes, Slurm
+### Across multiple nodes
 
 *To follow.* Set `pl_trainer_args.num_nodes: N` and submit with `sbatch`. Submission scripts
 will live in `slurm/`.
-
-### Without a wandb account
-
-Everything above assumes a dashboard. The run also works fully offline, at the cost of two
-extra steps and a script to read the result back.
-
-Add one line to the `wandb_config` block in the copy:
-
-```yaml
-logging_config:
-  log_lr: true
-  wandb_config:
-    project: openfold3-quickstart
-    experiment_name: single-h100
-    offline: true                  # add this
-```
-
-That is not sufficient on its own. `WANDB_MODE=offline` has to be in the environment too,
-because the YAML flag does not stop `wandb.init` attempting a login, and the run dies before
-training starts:
-
-```bash
-WANDB_MODE=offline pixi run -e openfold3-cuda12 run_openfold train \
-    --runner-yaml datasets/quickstart_single_h100.yaml --seed 42
-```
-
-There is no dashboard, and `logs/` stays empty. The metrics live in a binary `.wandb` file, so
-reading the curve means decoding it:
-
-```bash
-pixi run -e openfold3-cuda12 python -c "
-import csv, glob, json
-from wandb.proto import wandb_internal_pb2 as pb
-from wandb.sdk.internal import datastore
-
-store = datastore.DataStore()
-store.open_for_scan(glob.glob('quickstart_run/wandb/offline-run-*/run-*.wandb')[0])
-rows = []
-while True:
-    data = store.scan_data()
-    if data is None: break
-    rec = pb.Record(); rec.ParseFromString(data)
-    if rec.WhichOneof('record_type') != 'history': continue
-    row = {i.key or '.'.join(i.nested_key): json.loads(i.value_json) for i in rec.history.item}
-    if 'train/loss' in row: rows.append(row)
-
-cols = ['_step', 'train/loss', 'train/distogram_loss', 'train/diffusion_loss']
-with open('quickstart_run/metrics.csv', 'w', newline='') as f:
-    w = csv.DictWriter(f, fieldnames=cols, extrasaction='ignore'); w.writeheader(); w.writerows(rows)
-print(f'{len(rows)} steps -> quickstart_run/metrics.csv')"
-```
-
-```bash
-column -s, -t quickstart_run/metrics.csv
-```
-
-The notebook takes this path, so it runs without credentials, and prints the result as a table.
-
-A finished offline run can also be uploaded afterwards, which gets the dashboard back:
-
-```bash
-pixi run -e openfold3-cuda12 wandb sync quickstart_run/wandb/offline-run-*
-```
 
 ### Running longer
 
