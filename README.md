@@ -428,30 +428,18 @@ is where a complex tells you more than any single number can:
 <details>
 <summary>How these numbers were made</summary>
 
-Every confidence number here, the overall scores and the per-pair ones, is read straight out
-of the inference output. No computation needed:
+The confidence columns are read from the file inference already writes:
 
 ```bash
 python3 -c "
 import json
 f = 'quickstart_multimer/7cnx/seed_42/7cnx_seed_42_sample_1_confidences_aggregated.json'
 d = json.load(open(f))
-for k in ('avg_plddt', 'ptm', 'iptm', 'has_clash'):
-    print(f'{k:16s} {d[k]:.3f}')
-for pair, v in d['chain_pair_iptm'].items():
-    print(f'{pair:16s} {v:.3f}')"
+print({k: d[k] for k in ('avg_plddt', 'ptm', 'iptm', 'has_clash')})
+print(d['chain_pair_iptm'])"
 ```
 
-```
-avg_plddt        92.804
-ptm              0.897
-iptm             0.889
-has_clash        0.000
-(A, B)           0.959     (A, C)           0.846     (A, D)           0.783
-(B, C)           0.784     (B, D)           0.543     (C, D)           0.958
-```
-
-The RMSDs and the distances are measured against the crystal structure:
+The RMSDs and the distances are measured against the crystal:
 
 ```bash
 pixi run -e openfold3-cuda12 python figures/render_figure.py score \
@@ -459,19 +447,8 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py score \
     --ref-chains A,B,C,D --per-chain --contacts
 ```
 
-```
-  all matched atoms       0.57 A  over 557
-  chain A alone          0.29 A  over 246
-  chain B alone          1.11 A  over 38
-  chain C alone          0.35 A  over 240
-  chain D alone          0.20 A  over 33
-  closest approach between chains:
-     (A, B)   2.72 A     (A, C)   2.65 A     (A, D)  11.42 A
-     (B, C)  11.34 A     (B, D)  27.08 A     (C, D)   2.72 A
-```
-
-`--per-chain` superposes each chain on its own, so those rows measure a chain's fold rather
-than its placement in the assembly. `--contacts` is what makes the next paragraph checkable:
+`--per-chain` superposes each chain on its own, giving the rows below the first.
+`--contacts` gives the distance column, which is what makes the next paragraph checkable:
 without it you cannot tell a badly modelled interface from one that is not there.
 
 </details>
