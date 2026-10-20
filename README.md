@@ -622,13 +622,6 @@ curl -O https://raw.githubusercontent.com/jianwen-xie/openfold3-quickstart/main/
 pixi run -e openfold3-cuda12 python read_metrics.py quickstart_run --summary
 ```
 
-```
-quickstart_run/wandb/offline-run-20261020_155322-1yo9xs53/run-1yo9xs53.wandb  (18 records, logged offline)
-  train/loss                  6.7386 ->    8.0662   (8 points)
-  val/lddt_intra_protein      0.0514 ->    0.0485   (2 points)
-  val/rmsd                   20.8094 ->   21.0695   (2 points)
-```
-
 `--csv out.csv` exports instead, `--list-keys` shows everything logged, and without `--summary`
 it prints every step.
 
