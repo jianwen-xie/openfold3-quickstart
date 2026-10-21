@@ -644,12 +644,52 @@ Run length is set in the config: `data_module_args.epoch_len` is steps per epoch
 
 ### Across multiple GPUs
 
-*To follow.* Set `pl_trainer_args.devices: 8`; the launch command is unchanged.
+One node, eight GPUs. Copy the config and change two values:
+
+```bash
+cp datasets/quickstart_single_h100.yaml datasets/quickstart_8gpu.yaml
+```
+
+```yaml
+data_module_args:
+  epoch_len: 400                   # was 4
+pl_trainer_args:
+  devices: 8                       # was 1
+```
+
+```bash
+pixi run -e openfold3-cuda12 run_openfold train \
+    --runner-yaml datasets/quickstart_8gpu.yaml --seed 42
+```
+
+No `torchrun` and no `srun`: Lightning spawns one process per GPU, and switches to `DDPStrategy`
+on its own once `devices` times `num_nodes` exceeds 1.
+
+`epoch_len` has to rise with the GPU count. It counts samples for the whole run rather than
+steps per GPU, and the distributed sampler splits it across ranks:
+
+```
+steps per GPU = epoch_len / (devices × num_nodes × batch_size)
+```
+
+| `devices` | `num_nodes` | `epoch_len` | steps per GPU |
+|---:|---:|---:|---:|
+| 1 | 1 | 4 | 4 |
+| 8 | 1 | 4 | **0.5** |
+| 8 | 1 | 400 | 50 |
+| 8 | 32 | 128000 | 500 |
+
+Leave `epoch_len` at 4 and each of the eight GPUs gets half a sample. The last row is what
+`examples/training_yamls/initial_training.yml` ships, and its own comment reads
+`# Ckpt every 500 steps`.
+
+Effective batch size is `batch_size × devices × num_nodes`, so 8 here against 1 on a single
+GPU. Checkpoints and wandb logging stay on rank zero, so the output layout is unchanged.
 
 ### Across multiple nodes
 
-*To follow.* Set `pl_trainer_args.num_nodes: N` and submit with `sbatch`. Submission scripts
-will live in `slurm/`.
+Set `num_nodes` as well and submit with your scheduler. The steps-per-GPU formula above already
+covers it, and `mpi_plugin: true` switches the cluster environment to MPI if your site needs it.
 
 ### Training on the full dataset
 
