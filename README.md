@@ -507,13 +507,6 @@ default `max_epochs` is 2. The 1.6 GB catalogue the first command fetches is a l
 whole PDB training set rather than training data, and can be deleted once the subset caches
 exist.
 
-For more than 8 structures, pass the new `--train-size` to **both** commands. Give it only to
-the first and the download falls back to 8, finds the subset-8 cache already there, reports
-success, and training fails later on missing structures.
-
-Run length is set in the config rather than here: `data_module_args.epoch_len` is steps per
-epoch and `pl_trainer_args.max_epochs` is how many, so the defaults of 4 and 2 give 8 steps.
-
 ### On one GPU
 
 Training streams its losses to a Weights & Biases dashboard, which needs a free account.
@@ -645,6 +638,9 @@ pixi run -e openfold3-cuda12 wandb sync quickstart_run/wandb/offline-run-*
 ```
 
 </details>
+
+Run length is set in the config: `data_module_args.epoch_len` is steps per epoch and
+`pl_trainer_args.max_epochs` is how many, so the defaults of 4 and 2 give 8 steps.
 
 ### Across multiple GPUs
 
