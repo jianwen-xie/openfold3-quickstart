@@ -206,7 +206,7 @@ def write_plot(rows: list[dict], path: str, keys: tuple = PLOT_KEYS) -> None:
             ax.plot(steps, values, color="#2a78d6", linewidth=2.0, marker="o",
                     markersize=6, markeredgecolor="#fcfcfb", markeredgewidth=1.5)
         ax.set_title(f"{key}  ({len(values)} points)", fontsize=10)
-        ax.set_xlabel("step")
+        ax.set_xlabel("_step")   # wandb record index, not the optimizer step
         ax.grid(alpha=0.25)
         if key.endswith("lddt_intra_protein"):
             ax.set_ylim(0, 1)      # full lDDT range; zoomed, noise looks like progress
