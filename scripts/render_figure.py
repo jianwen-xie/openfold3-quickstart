@@ -18,8 +18,8 @@ Examples, reproducing the figures in the README:
   render_figure.py chains quickstart_multimer/7cnx/seed_42/*_sample_1_model.cif \\
       assets/psd_chains.png --rotate 20 --tilt 10 --zoom 1.10 --width 640
 
-  render_figure.py super  demo_mhc/.../*_sample_1_model.cif 1duz.cif \\
-      assets/demo_mhc_vs_1duz.png --rotate 70 --sticks C --ref-sticks F --width 420
+  render_figure.py super  quickstart_multimer/7cnx/seed_42/*_sample_1_model.cif 7cnx.cif \\
+      assets/psd_vs_7cnx.png --ref-chains A,B,C,D --rotate 20 --tilt 10 --width 640
 """
 import argparse, json, pathlib, shutil, subprocess, sys
 
