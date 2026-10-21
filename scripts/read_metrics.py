@@ -185,12 +185,25 @@ def write_plot(rows: list[dict], path: str, keys: tuple = PLOT_KEYS) -> None:
             "Use --list-keys to see what this run has, then --keys to pick."
         )
 
+    # wandb's _step counts every logged record, validation included, so it is not
+    # a training step. The nth train record IS training step n, and validation runs
+    # once every len(train)/len(val) steps, so both can be put on a real step axis.
+    n_train = len(series(rows, "train/loss"))
+
+    def step_axis(key: str, pts: list) -> "np.ndarray":
+        if not key.startswith("val/"):
+            return np.arange(len(pts))
+        if n_train and len(pts):
+            every = n_train / len(pts)
+            return np.array([(i + 1) * every for i in range(len(pts))])
+        return np.array([p[0] for p in pts])      # fall back to _step
+
     fig, axes = plt.subplots(1, len(panels), figsize=(5.5 * len(panels), 4.1), dpi=150)
     if len(panels) == 1:
         axes = [axes]
 
     for ax, (key, pts) in zip(axes, panels):
-        steps = np.array([p[0] for p in pts])
+        steps = step_axis(key, pts)
         values = np.array([p[1] for p in pts])
         if len(values) >= SMOOTH_MIN_POINTS:
             # raw trace faint, running mean on top, so noise does not hide the trend
@@ -206,14 +219,14 @@ def write_plot(rows: list[dict], path: str, keys: tuple = PLOT_KEYS) -> None:
             ax.plot(steps, values, color="#2a78d6", linewidth=2.0, marker="o",
                     markersize=6, markeredgecolor="#fcfcfb", markeredgewidth=1.5)
         ax.set_title(f"{key}  ({len(values)} points)", fontsize=10)
-        ax.set_xlabel("_step")   # wandb record index, not the optimizer step
+        ax.set_xlabel("training step")
         ax.grid(alpha=0.25)
         if key.endswith("lddt_intra_protein"):
             ax.set_ylim(0, 1)      # full lDDT range; zoomed, noise looks like progress
 
-    # one step axis across panels, so validation points line up with the steps
-    # they were measured at
-    all_steps = [p[0] for _, pts in panels for p in pts]
+    # one axis across panels, so validation points line up with the training
+    # steps they were measured at
+    all_steps = [x for key, pts in panels for x in step_axis(key, pts)]
     for ax in axes:
         ax.set_xlim(min(all_steps), max(all_steps))
 
