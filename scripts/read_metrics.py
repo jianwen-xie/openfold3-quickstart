@@ -25,7 +25,6 @@ import sys
 
 DEFAULT_COLUMNS = (
     "step",
-    "_step",
     "train/loss",
     "train/distogram_loss",
     "train/diffusion_loss",
