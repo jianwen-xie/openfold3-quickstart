@@ -218,7 +218,10 @@ def write_plot(rows: list[dict], path: str, keys: tuple = PLOT_KEYS) -> None:
         else:
             ax.plot(steps, values, color="#2a78d6", linewidth=2.0, marker="o",
                     markersize=6, markeredgecolor="#fcfcfb", markeredgewidth=1.5)
-        ax.set_title(f"{key}  ({len(values)} points)", fontsize=10)
+        # the cadence is what explains the differing point counts, so say it
+        cadence = "once per epoch" if key.startswith("val/") else "every training step"
+        ax.set_title(f"logged {cadence}, {len(values)} points", fontsize=10)
+        ax.set_ylabel(key)
         ax.set_xlabel("training step")
         ax.grid(alpha=0.25)
         if key.endswith("lddt_intra_protein"):
