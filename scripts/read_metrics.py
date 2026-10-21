@@ -36,6 +36,11 @@ SUMMARY_KEYS = (
     "val/rmsd",
 )
 
+PLOT_KEYS = ("train/loss", "val/lddt_intra_protein")
+
+SMOOTH_WINDOW = 10          # running mean, applied once a series is long enough
+SMOOTH_MIN_POINTS = 20
+
 # Where a .wandb file hides, relative to whatever the user points us at.
 SEARCH_PATTERNS = (
     "run-*.wandb",
@@ -159,6 +164,67 @@ def print_table(rows: list[dict], columns: tuple) -> None:
         print("  ".join(cells))
 
 
+def write_plot(rows: list[dict], path: str, keys: tuple = PLOT_KEYS) -> None:
+    """Draw one panel per key and save a PNG."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import numpy as np
+    except ImportError as exc:
+        raise MetricsError(
+            f"plotting needs matplotlib and numpy ({exc}). Run inside the "
+            "project environment, or use --csv and plot elsewhere."
+        ) from exc
+
+    panels = [(k, series(rows, k)) for k in keys]
+    panels = [(k, pts) for k, pts in panels if pts]
+    if not panels:
+        raise MetricsError(
+            f"none of these were logged: {', '.join(keys)}. "
+            "Use --list-keys to see what this run has, then --keys to pick."
+        )
+
+    fig, axes = plt.subplots(1, len(panels), figsize=(5.5 * len(panels), 4.1), dpi=150)
+    if len(panels) == 1:
+        axes = [axes]
+
+    for ax, (key, pts) in zip(axes, panels):
+        steps = np.array([p[0] for p in pts])
+        values = np.array([p[1] for p in pts])
+        if len(values) >= SMOOTH_MIN_POINTS:
+            # raw trace faint, running mean on top, so noise does not hide the trend
+            ax.plot(steps, values, color="#2a78d6", linewidth=1.0, alpha=0.28)
+            window = np.ones(SMOOTH_WINDOW) / SMOOTH_WINDOW
+            ax.plot(
+                steps[SMOOTH_WINDOW - 1:],
+                np.convolve(values, window, mode="valid"),
+                color="#2a78d6",
+                linewidth=2.0,
+            )
+        else:
+            ax.plot(steps, values, color="#2a78d6", linewidth=2.0, marker="o",
+                    markersize=6, markeredgecolor="#fcfcfb", markeredgewidth=1.5)
+        ax.set_title(f"{key}  ({len(values)} points)", fontsize=10)
+        ax.set_xlabel("step")
+        ax.grid(alpha=0.25)
+        if key.endswith("lddt_intra_protein"):
+            ax.set_ylim(0, 1)      # full lDDT range; zoomed, noise looks like progress
+
+    # one step axis across panels, so validation points line up with the steps
+    # they were measured at
+    all_steps = [p[0] for _, pts in panels for p in pts]
+    for ax in axes:
+        ax.set_xlim(min(all_steps), max(all_steps))
+
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+
+
 def write_csv(rows: list[dict], columns: tuple, path: str) -> int:
     present = [c for c in columns if any(c in row for row in rows)]
     steps = [row for row in rows if any(c in row for c in present if c != "_step")]
@@ -187,6 +253,9 @@ def main(argv: list[str] | None = None) -> int:
         "(default: quickstart_run)",
     )
     parser.add_argument("--csv", metavar="PATH", help="also write a CSV here")
+    parser.add_argument(
+        "--plot", metavar="PATH", help="also write a PNG of the curves here"
+    )
     parser.add_argument(
         "--summary",
         action="store_true",
@@ -226,6 +295,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.csv:
             written = write_csv(rows, columns or DEFAULT_COLUMNS, args.csv)
             print(f"{written} steps -> {args.csv}")
+        if args.plot:
+            write_plot(rows, args.plot, columns or PLOT_KEYS)
+            print(f"plot -> {args.plot}")
     except MetricsError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

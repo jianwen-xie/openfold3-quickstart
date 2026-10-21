@@ -622,6 +622,12 @@ curl -O https://raw.githubusercontent.com/jianwen-xie/openfold3-quickstart/main/
 pixi run -e openfold3-cuda12 python read_metrics.py quickstart_run --summary
 ```
 
+`--plot curve.png` draws the curves, which is the offline substitute for the dashboard:
+
+```bash
+pixi run -e openfold3-cuda12 python read_metrics.py quickstart_run --plot curve.png
+```
+
 `--csv out.csv` exports instead, `--list-keys` shows everything logged, and without `--summary`
 it prints every step.
 
