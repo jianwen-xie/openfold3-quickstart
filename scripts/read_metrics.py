@@ -24,6 +24,7 @@ import os
 import sys
 
 DEFAULT_COLUMNS = (
+    "step",
     "_step",
     "train/loss",
     "train/distogram_loss",
@@ -108,6 +109,25 @@ def read_history(run_file: str) -> list[dict]:
             }
         )
     return rows
+
+
+def with_training_step(rows: list[dict]) -> list[dict]:
+    """Return new rows carrying a derived `step`, the real training step.
+
+    wandb's `_step` counts every logged record, so validation and epoch
+    aggregates consume numbers that are not training steps. The nth record
+    carrying train/loss is training step n. New dicts; the input is untouched,
+    and the .wandb file is never written to.
+    """
+    step = 0
+    out = []
+    for row in sorted(rows, key=lambda r: r.get("_step", -1)):
+        if "train/loss" in row:
+            out.append({**row, "step": step})
+            step += 1
+        else:
+            out.append(dict(row))
+    return out
 
 
 def series(rows: list[dict], key: str) -> list[tuple]:
@@ -296,6 +316,7 @@ def main(argv: list[str] | None = None) -> int:
 
         mode = "offline" if "offline-run-" in run_file else "online"
         print(f"{run_file}  ({len(rows)} records, logged {mode})")
+        rows = with_training_step(rows)
 
         if args.list_keys:
             for key in numeric_keys(rows):
