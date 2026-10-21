@@ -648,28 +648,6 @@ pixi run -e openfold3-cuda12 wandb sync quickstart_run/wandb/offline-run-*
 *To follow.* Set `pl_trainer_args.num_nodes: N` and submit with `sbatch`. Submission scripts
 will live in `slurm/`.
 
-### Running longer
-
-The default is deliberately short: two epochs of four steps, enough to prove the pipeline.
-Eight points is not a curve. To get a trace worth monitoring, raise these in the config:
-
-| Setting | Default here | For a longer run |
-|---|---|---|
-| `data_module_args.epoch_len` | `4` | `50`+, steps per epoch |
-| `pl_trainer_args.max_epochs` | `2` | `10`+ |
-| `--train-size` on `generate-pdb-subset` | `8` | more structures to sample from |
-
-More structures means re-running both setup commands with the new size, not just the first:
-
-```bash
-pixi run -e openfold3-cuda12 generate-pdb-subset --train-size 32
-pixi run -e openfold3-cuda12 download-pdb-subset --train-size 32
-```
-
-At roughly 8 to 10 s per step on one H100, 150 steps is about 20 minutes plus validation
-between epochs. Each new size is a fresh download, so check free disk first: 8 structures take
-73 MB, and it scales roughly with the count.
-
 ### Training on the full dataset
 
 The subset above exists so the pipeline can be proven quickly. Real training swaps it for the
