@@ -3,12 +3,9 @@
 Run [OpenFold3](https://github.com/aqlaboratory/openfold-3) inference and training, and watch
 the training curve.
 
-**[→ Open `quickstart.ipynb`](quickstart.ipynb)**: the single-GPU path, executed, with outputs
-kept so you can read them without a GPU.
-
 | Stage | Inference | Training |
 |---|---|---|
-| One GPU | documented, executed | documented, executed |
+| One GPU | documented | documented |
 | Multiple GPUs, one node | to follow | to follow |
 | Multiple nodes (Slurm) | to follow | to follow |
 
@@ -701,20 +698,6 @@ two-epoch smoke test.
 ```bash
 aws s3 sync s3://openfold3-data/pdb_training_set/ /shared/openfold3/pdb_training_set/ --no-sign-request
 ```
-
-## Running the notebook instead
-
-The notebook runs all of the above and keeps the output. Most of its cells are these same
-shell commands; two are Python analysis, and one imports `wandb`, so the pixi environment is
-the most convenient kernel:
-
-```bash
-pixi run -e openfold3-cuda12 python -m pip install ipykernel
-pixi run -e openfold3-cuda12 python -m ipykernel install --user \
-    --name openfold3-cuda12 --display-name "OpenFold3 (pixi cuda12)"
-```
-
-Then edit the `%cd` in its first cell to point at your checkout.
 
 ## Links
 
