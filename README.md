@@ -4,8 +4,7 @@ Run [OpenFold3](https://github.com/aqlaboratory/openfold-3) inference and traini
 the training curve.
 
 Everything here is a smoke-test-sized run: a small subset of the PDB, a few minutes, enough to
-confirm the pipeline works end to end and to see losses being logged. The settings to turn it
-into a real run are called out as you go.
+confirm the pipeline works end to end and to see losses being logged.
 
 Inference is worked through three kinds of input (a single protein, a protein with a ligand,
 and a multi-chain complex), each scored against its crystal structure, because the confidence
