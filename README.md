@@ -3,12 +3,6 @@
 Run [OpenFold3](https://github.com/aqlaboratory/openfold-3) inference and training, and watch
 the training curve.
 
-| Stage | Inference | Training |
-|---|---|---|
-| One GPU | documented | documented |
-| Multiple GPUs, one node | to follow | to follow |
-| Multiple nodes (Slurm) | to follow | to follow |
-
 Everything here is a smoke-test-sized run: a small subset of the PDB, a few minutes, enough to
 confirm the pipeline works end to end and to see losses being logged. The settings to turn it
 into a real run are called out as you go.
@@ -471,13 +465,6 @@ pixi run -e openfold3-cuda12 python figures/render_figure.py score \
 
 </details>
 
-### Across multiple GPUs
-
-*To follow.* OpenFold3 distributes a multi-query job across GPUs, parallel across queries
-rather than within a single structure. See the upstream
-[inference docs](https://openfold-3.readthedocs.io/en/latest/inference.html#inference-run-on-multiple-gpus)
-in the meantime.
-
 ## Training
 
 ### Prepare the training data
@@ -638,66 +625,6 @@ pixi run -e openfold3-cuda12 wandb sync quickstart_run/wandb/offline-run-*
 
 Run length is set in the config: `data_module_args.epoch_len` is steps per epoch and
 `pl_trainer_args.max_epochs` is how many, so the defaults of 4 and 2 give 8 steps.
-
-### Across multiple GPUs
-
-One node, eight GPUs. Copy the config and change two values:
-
-```bash
-cp datasets/quickstart_single_h100.yaml datasets/quickstart_8gpu.yaml
-```
-
-```yaml
-data_module_args:
-  epoch_len: 400                   # was 4
-pl_trainer_args:
-  devices: 8                       # was 1
-```
-
-```bash
-pixi run -e openfold3-cuda12 run_openfold train \
-    --runner-yaml datasets/quickstart_8gpu.yaml --seed 42
-```
-
-No `torchrun` and no `srun`: Lightning spawns one process per GPU, and switches to `DDPStrategy`
-on its own once `devices` times `num_nodes` exceeds 1.
-
-`epoch_len` has to rise with the GPU count. It counts samples for the whole run rather than
-steps per GPU, and the distributed sampler splits it across ranks:
-
-```
-steps per GPU = epoch_len / (devices × num_nodes × batch_size)
-```
-
-| `devices` | `num_nodes` | `epoch_len` | steps per GPU |
-|---:|---:|---:|---:|
-| 1 | 1 | 4 | 4 |
-| 8 | 1 | 4 | **0.5** |
-| 8 | 1 | 400 | 50 |
-| 8 | 32 | 128000 | 500 |
-
-Leave `epoch_len` at 4 and each of the eight GPUs gets half a sample. The last row is what
-`examples/training_yamls/initial_training.yml` ships, and its own comment reads
-`# Ckpt every 500 steps`.
-
-Effective batch size is `batch_size × devices × num_nodes`, so 8 here against 1 on a single
-GPU. Checkpoints and wandb logging stay on rank zero, so the output layout is unchanged.
-
-### Across multiple nodes
-
-Set `num_nodes` as well and submit with your scheduler. The steps-per-GPU formula above already
-covers it, and `mpi_plugin: true` switches the cluster environment to MPI if your site needs it.
-
-### Training on the full dataset
-
-The subset above exists so the pipeline can be proven quickly. Real training swaps it for the
-full PDB set and starts from one of the configs in `examples/training_yamls/`
-(`initial_training.yml` through `finetune_3.yml`), which carry real schedules rather than a
-two-epoch smoke test.
-
-```bash
-aws s3 sync s3://openfold3-data/pdb_training_set/ /shared/openfold3/pdb_training_set/ --no-sign-request
-```
 
 ## Links
 
